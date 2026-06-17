@@ -1,0 +1,12 @@
+version: '3.4'
+name: social-mail-cloud-server
+services:
+
+  tls-server:
+    image: social-mail-yarp-proxy
+    container_name: social-mail-yarp-proxy
+    restart: always
+    depends_on:
+      - web-server
+    build:
+      context: .
