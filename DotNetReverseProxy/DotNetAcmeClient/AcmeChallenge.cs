@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace DotNetAcmeClient;
@@ -22,4 +23,7 @@ public class AcmeChallenge
 
     [JsonPropertyName("keyAuthorization")]
     public string KeyAuthorization { get; set; }
+
+    [JsonPropertyName("error")]
+    public JsonNode Error {get;set;}
 }
