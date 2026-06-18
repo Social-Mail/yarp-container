@@ -4,6 +4,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon;
 using Amazon.Route53.Model;
 using Amazon.Runtime;
 using DotNetAcmeClient;
@@ -121,7 +122,7 @@ public class CertificateStore: IMiddleware
     private async Task SaveDnsAsync(AcmeChallengeGroup a, AsyncDisposeList d)
     {
         var cred = new BasicAWSCredentials(this.awsAccessKey, this.awsAccessKeySecret);
-        var c = new Amazon.Route53.AmazonRoute53Client(cred);
+        var c = new Amazon.Route53.AmazonRoute53Client(cred, RegionEndpoint.USEast1);
 
         var Name = $"{a.DomainName}{this.awsZoneSuffix}";
         var Type = "TXT";
@@ -153,31 +154,31 @@ public class CertificateStore: IMiddleware
             }
         });
 
-        // d.Add(async () =>
-        // {
-        //     await c.ChangeResourceRecordSetsAsync(new ChangeResourceRecordSetsRequest
-        //     {
-        //         HostedZoneId = this.awsZoneID,
-        //         ChangeBatch = new ChangeBatch
-        //         {
-        //             Comment = "Deleting AMCE Challenge",
-        //             Changes = new System.Collections.Generic.List<Change>
-        //             {
-        //                 new Change
-        //                 {
-        //                     Action = "DELETE",
-        //                     ResourceRecordSet = new ResourceRecordSet
-        //                     {
-        //                         Name = Name,
-        //                         Type = Type,
-        //                         TTL = 60,
-        //                         ResourceRecords = ResourceRecords
-        //                     }                            
-        //                 }
-        //             }
-        //         }
-        //     });
-        // });
+        d.Add(async () =>
+        {
+            await c.ChangeResourceRecordSetsAsync(new ChangeResourceRecordSetsRequest
+            {
+                HostedZoneId = this.awsZoneID,
+                ChangeBatch = new ChangeBatch
+                {
+                    Comment = "Deleting AMCE Challenge",
+                    Changes = new System.Collections.Generic.List<Change>
+                    {
+                        new Change
+                        {
+                            Action = "DELETE",
+                            ResourceRecordSet = new ResourceRecordSet
+                            {
+                                Name = Name,
+                                Type = Type,
+                                TTL = 60,
+                                ResourceRecords = ResourceRecords
+                            }                            
+                        }
+                    }
+                }
+            });
+        });
         
     }
 
