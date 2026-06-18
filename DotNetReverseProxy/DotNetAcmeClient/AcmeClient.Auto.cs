@@ -6,6 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.IdentityModel.Tokens;
 
 namespace DotNetAcmeClient;
 
@@ -83,7 +84,18 @@ partial class AcmeClient
             
             var all = await Task.WhenAll(order.Authorizations.Select(async (a) => {
                 var auth = await this.GetAuthorizationAsync(a, cancellationToken);
-                var challenges = await Task.WhenAll(auth.Challenges.Select((c) => this.GetChallengeAsync(c, cancellationToken)));
+
+                var jwk = this.GetJwk();
+                var keysum = Signer.SHA256Base64Url(System.Text.Json.JsonSerializer.Serialize(jwk, jsonOptions));
+                var challenges = auth.Challenges.Select((c) =>
+                {
+                    c.KeyAuthorization = $"{c.Token}.{keysum}";
+                    if (c.Type == "dns-01")
+                    {
+                        c.KeyAuthorization = Signer.SHA256Base64Url(c.KeyAuthorization);
+                    }
+                    return c;
+                });
                 return (auth, challenges);
             }));
             var grouped = all.SelectMany((x) => x.challenges.Select((c) => (c, x))).GroupBy((x) => x.c.Type, (x) => x.x);

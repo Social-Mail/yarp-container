@@ -13,9 +13,11 @@ public class AcmeAuthorization
 
 
     [JsonPropertyName("challenges")]
-    public string[] Challenges { get; set; }
+    public AcmeChallenge[] Challenges { get; set; }
 
 
     [JsonPropertyName("expires")]
     public string Expires { get; set; }
+
+    public string url {get;set;}
 }

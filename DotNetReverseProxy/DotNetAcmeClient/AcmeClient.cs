@@ -137,15 +137,17 @@ public partial class AcmeClient
     {
         var request = await ApiRequest(authorizationUrl, new {  }, cancellationToken, true, false);
 
-        return (await request.GetResponseAsync<AcmeAuthorization>(_httpClient, cancellationToken))!;
+        var r = (await request.GetResponseAsync<AcmeAuthorization>(_httpClient, cancellationToken))!;
+        r.url = authorizationUrl;
+        return r;
     }
 
-    public async Task<AcmeChallenge> GetChallengeAsync(string challengeUrl, CancellationToken cancellationToken = default)
-    {
-        var request = await ApiRequest(challengeUrl, new {  }, cancellationToken, true, false);
+    // public async Task<AcmeChallenge> GetChallengeAsync(string challengeUrl, CancellationToken cancellationToken = default)
+    // {
+    //     var request = await ApiRequest(challengeUrl, new {  }, cancellationToken, true, false);
 
-        return (await request.GetResponseAsync<AcmeChallenge>(_httpClient, cancellationToken))!;
-    }
+    //     return (await request.GetResponseAsync<AcmeChallenge>(_httpClient, cancellationToken))!;
+    // }
 
     public async Task CompleteChallengeAsync(string challengeUrl, string keyAuthorization, CancellationToken cancellationToken = default)
     {

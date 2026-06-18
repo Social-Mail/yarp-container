@@ -125,7 +125,9 @@ public class CertificateStore: IMiddleware
 
         var Name = $"{a.DomainName}{this.awsZoneSuffix}";
         var Type = "TXT";
-        var ResourceRecords = a.Challenges.Select((a) => new ResourceRecord($"\"{ a.KeyAuthorization }\"")).ToList();
+        var ResourceRecords = a.Challenges.Select((a1) => new ResourceRecord($"\"{ a1.KeyAuthorization }\"")).ToList();
+
+        Console.WriteLine($"Saving {Name} - {Type}: {a.Authorization}");
 
         await c.ChangeResourceRecordSetsAsync(new Amazon.Route53.Model.ChangeResourceRecordSetsRequest
         {
@@ -151,31 +153,31 @@ public class CertificateStore: IMiddleware
             }
         });
 
-        d.Add(async () =>
-        {
-            await c.ChangeResourceRecordSetsAsync(new ChangeResourceRecordSetsRequest
-            {
-                HostedZoneId = this.awsZoneID,
-                ChangeBatch = new ChangeBatch
-                {
-                    Comment = "Deleting AMCE Challenge",
-                    Changes = new System.Collections.Generic.List<Change>
-                    {
-                        new Change
-                        {
-                            Action = "DELETE",
-                            ResourceRecordSet = new ResourceRecordSet
-                            {
-                                Name = Name,
-                                Type = Type,
-                                TTL = 60,
-                                ResourceRecords = ResourceRecords
-                            }                            
-                        }
-                    }
-                }
-            });
-        });
+        // d.Add(async () =>
+        // {
+        //     await c.ChangeResourceRecordSetsAsync(new ChangeResourceRecordSetsRequest
+        //     {
+        //         HostedZoneId = this.awsZoneID,
+        //         ChangeBatch = new ChangeBatch
+        //         {
+        //             Comment = "Deleting AMCE Challenge",
+        //             Changes = new System.Collections.Generic.List<Change>
+        //             {
+        //                 new Change
+        //                 {
+        //                     Action = "DELETE",
+        //                     ResourceRecordSet = new ResourceRecordSet
+        //                     {
+        //                         Name = Name,
+        //                         Type = Type,
+        //                         TTL = 60,
+        //                         ResourceRecords = ResourceRecords
+        //                     }                            
+        //                 }
+        //             }
+        //         }
+        //     });
+        // });
         
     }
 
