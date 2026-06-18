@@ -117,7 +117,8 @@ partial class AcmeClient
                 {
                     return;
                 }
-
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(c));
+                await Task.Delay(TimeSpan.FromSeconds(5));
             }
 
         }
