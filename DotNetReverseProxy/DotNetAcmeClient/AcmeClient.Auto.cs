@@ -4,6 +4,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
@@ -27,7 +28,11 @@ partial class AcmeClient
 
         var order = await this.CreateOrderAsync(hostNames, cancellationToken);
 
+        Console.WriteLine($"Order: {JsonSerializer.Serialize(order, jsonOptions)}");
+
         var authorizations = await GetAuthorizationChallengesAsync(order, cancellationToken);
+
+        Console.WriteLine($"Authorizations: {JsonSerializer.Serialize(authorizations, jsonOptions)}");
 
         await using var d = await applyChallenges(authorizations, cancellationToken);
 
@@ -83,6 +88,7 @@ partial class AcmeClient
         {
             Dictionary<string, AcmeChallengeGroup> pairs = new ();
             foreach(var a in order.Authorizations){
+                Console.WriteLine($"Fetching Authorization; {a}");
                 var auth = await this.GetAuthorizationAsync(a, cancellationToken);
                 var k = auth.Identifier.Type;
                 if(!pairs.TryGetValue(k, out var g))
