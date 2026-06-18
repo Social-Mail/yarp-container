@@ -108,7 +108,12 @@ partial class AcmeClient
                     g.Challenges.Add(c);
                 }
             }
-            return pairs.Values.ToArray();
+            var list = new List<AcmeChallengeGroup>();
+            foreach(var kvp in pairs)
+            {
+                list.Add(kvp.Value);
+            }
+            return list.ToArray();
         }
 
         string GenerateCsr(IEnumerable<string> domains, CancellationToken cancellationToken = default)

@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace DotNetAcmeClient;
 
-public readonly struct AcmeChallengeGroup
+public class AcmeChallengeGroup
 {
     public readonly string Type;
 
