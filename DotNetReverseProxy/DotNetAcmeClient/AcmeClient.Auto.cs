@@ -81,25 +81,27 @@ partial class AcmeClient
 
         async Task<AcmeChallengeGroup[]> GetAuthorizationChallengesAsync(AcmeOrder order, CancellationToken cancellationToken)
         {
-            
-            var all = await Task.WhenAll(order.Authorizations.Select(async (a) => {
+            Dictionary<string, AcmeChallengeGroup> pairs = new ();
+            foreach(var a in order.Authorizations){
                 var auth = await this.GetAuthorizationAsync(a, cancellationToken);
+
+                if(!pairs.TryGetValue(auth.Identifier.Type, out var g))
+                {
+                    g = new AcmeChallengeGroup(domainName, auth.Identifier.Type, auth);
+                }
 
                 var jwk = this.GetJwk();
                 var keysum = Signer.SHA256Base64Url(System.Text.Json.JsonSerializer.Serialize(jwk, jsonOptions));
-                var challenges = auth.Challenges.Select((c) =>
-                {
+                foreach(var c in auth.Challenges) {
                     c.KeyAuthorization = $"{c.Token}.{keysum}";
                     if (c.Type == "dns-01")
                     {
                         c.KeyAuthorization = Signer.SHA256Base64Url(c.KeyAuthorization);
                     }
-                    return c;
-                });
-                return (auth, challenges);
-            }));
-            var grouped = all.SelectMany((x) => x.challenges.Select((c) => (c, x))).GroupBy((x) => x.c.Type, (x) => x.x);
-            return grouped.Select((x) => new AcmeChallengeGroup( domainName, x.Key, x.First().auth, x.SelectMany((c) => c.challenges).ToArray())).ToArray();
+                    g.Challenges.Add(c);
+                }
+            }
+            return pairs.Values.ToArray();
         }
 
         string GenerateCsr(IEnumerable<string> domains, CancellationToken cancellationToken = default)

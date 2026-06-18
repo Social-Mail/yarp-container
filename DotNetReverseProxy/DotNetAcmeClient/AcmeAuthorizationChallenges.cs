@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace DotNetAcmeClient;
 
 public readonly struct AcmeChallengeGroup
@@ -6,14 +8,13 @@ public readonly struct AcmeChallengeGroup
 
     public readonly string DomainName;
     public readonly AcmeAuthorization Authorization;
-    public readonly AcmeChallenge[] Challenges;
+    public readonly List<AcmeChallenge> Challenges = new List<AcmeChallenge>();
 
-    public AcmeChallengeGroup(string domainName, string type, AcmeAuthorization authorization, AcmeChallenge[] challenges)
+    public AcmeChallengeGroup(string domainName, string type, AcmeAuthorization authorization)
     {
         this.Type = type;
         this.DomainName = domainName;
         this.Authorization = authorization;
-        this.Challenges = challenges;
     }
 
 }
