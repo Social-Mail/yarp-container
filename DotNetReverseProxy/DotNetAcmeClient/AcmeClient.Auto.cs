@@ -50,14 +50,17 @@ partial class AcmeClient
         bool authorizationSuccess = false;
 
         var list = new List<string>();
-        foreach(var a in authorizations)
+        await Task.WhenAll(authorizations.Select(async (a) =>
         {
-            foreach(var c in a.Challenges)
+            await Task.WhenAll(a.Challenges.Select(async (c) =>
             {
                 try
                 {
                     await this.CompleteChallengeAsync(c.url, cancellationToken);
                     authorizationSuccess = true;
+
+                    await WaitForValidChallengeAsync(c.url, cancellationToken);
+
                 }  catch (Exception ex)
                     {
                         // do nothing...
@@ -66,8 +69,8 @@ partial class AcmeClient
                             list.Add(System.Text.Json.JsonSerializer.Serialize(new { error = ex.ToString() }));
                         }
                     }
-            }
-        }
+            }));
+        }));
 
         var orderReady = false;
         for(int i=0;i<30;i++)
@@ -75,6 +78,7 @@ partial class AcmeClient
             await Task.Delay(TimeSpan.FromSeconds(10));
 
             var o = await this.RefreshOrder(order.url, cancellationToken);
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(o));
             if (Regex.IsMatch("valid|ready", o.Status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
             {
                 orderReady = true;
@@ -103,6 +107,20 @@ partial class AcmeClient
 
 
         return (cert, key);
+
+        async Task WaitForValidChallengeAsync(string url, CancellationToken cancellationToken)
+        {
+            for(int i=0;i<30;i++) {
+                var request = await ApiRequest(url, new { }, cancellationToken, true, false);
+                var c = await request.GetResponseAsync<AcmeChallenge>(_httpClient, cancellationToken);
+                if (Regex.IsMatch("valid|ready", c.Status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
+                {
+                    return;
+                }
+
+            }
+
+        }
 
         async Task<AcmeChallengeGroup[]> GetAuthorizationChallengesAsync(bool hasWildcard, AcmeOrder order, CancellationToken cancellationToken)
         {
