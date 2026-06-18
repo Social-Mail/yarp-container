@@ -21,7 +21,7 @@ partial class AcmeClient
 
     public async Task<AcmeOrder> RefreshOrder(string url, CancellationToken cancellationToken)
     {
-        var request = await ApiRequest(_directory.NewOrder, (object)null, cancellationToken, true, false);
+        var request = await ApiRequest(url, (object)null, cancellationToken, true, false);
         return (await request.GetResponseAsync<AcmeOrder>(this._httpClient, cancellationToken))!;
     }
 
@@ -37,11 +37,11 @@ partial class AcmeClient
 
         var order = await this.CreateOrderAsync(hostNames, cancellationToken);
 
-        // Console.WriteLine($"Order: {JsonSerializer.Serialize(order, jsonOptions)}");
+        Console.WriteLine($"Order: {JsonSerializer.Serialize(order, jsonOptions)}");
 
         var authorizations = await GetAuthorizationChallengesAsync(order, cancellationToken);
 
-        // Console.WriteLine($"Authorizations: {JsonSerializer.Serialize(authorizations, jsonOptions)}");
+        Console.WriteLine($"Authorizations: {JsonSerializer.Serialize(authorizations, jsonOptions)}");
 
         await using var d = await applyChallenges(authorizations, cancellationToken);
 
