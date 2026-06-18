@@ -26,6 +26,14 @@ partial class AcmeClient
 
     public async Task<RequestBuilder> SignedRequest<T>(string url, T payload, CancellationToken cancellationToken, string? kid = null, string? nonce = null, bool includeExternalAccountBinding = false)
     {
+
+        // Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+        // {
+        //     url,
+        //     kid,
+        //     includeExternalAccountBinding
+        // }));
+
         if (nonce == null)
         {
             var request = RequestBuilder.Get(_directory.NewNonce);
