@@ -3,12 +3,9 @@ using RetroCoreFit;
 
 namespace DotNetAcmeClient;
 
-public class AcmeOrder
+public class AcmeOrder: AcmeStatus
 {
 
-
-    [JsonPropertyName("status")]
-    public string Status { get; set; }
 
 
     [JsonPropertyName("identifiers")]

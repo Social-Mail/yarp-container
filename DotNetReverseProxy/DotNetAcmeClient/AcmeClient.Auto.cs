@@ -104,6 +104,8 @@ partial class AcmeClient
 
         Console.WriteLine(JsonSerializer.Serialize(result));
 
+        await WaitForValidChallengeAsync(order.url, cancellationToken);
+
         var cert = await this.DownloadCertificateAsync(result.Certificate, cancellationToken);
 
         return cert;
@@ -112,7 +114,7 @@ partial class AcmeClient
         {
             for(int i=0;i<30;i++) {
                 var request = await ApiRequest(url, (object)null, cancellationToken, true, false);
-                var c = await request.GetResponseAsync<AcmeChallenge>(_httpClient, cancellationToken);
+                var c = await request.GetResponseAsync<AcmeStatus>(_httpClient, cancellationToken);
                 if (Regex.IsMatch("valid|ready", c.Status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
                 {
                     return;

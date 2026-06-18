@@ -3,15 +3,12 @@ using System.Text.Json.Serialization;
 
 namespace DotNetAcmeClient;
 
-public class AcmeChallenge
+public class AcmeChallenge: AcmeStatus
 {
 
     [JsonPropertyName("type")]
     public string Type { get; set; }
 
-
-    [JsonPropertyName("status")]
-    public string Status { get; set; }
 
     [JsonPropertyName("url")]
     public string url { get; set; }
