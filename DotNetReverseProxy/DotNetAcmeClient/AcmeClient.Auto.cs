@@ -37,9 +37,11 @@ partial class AcmeClient
 
         var order = await this.CreateOrderAsync(hostNames, cancellationToken);
 
+        var hasWildcard = hostNames.Any((h) => h.StartsWith("*."));
+
         Console.WriteLine($"Order: {JsonSerializer.Serialize(order, jsonOptions)}");
 
-        var authorizations = await GetAuthorizationChallengesAsync(order, cancellationToken);
+        var authorizations = await GetAuthorizationChallengesAsync(hasWildcard, order, cancellationToken);
 
         Console.WriteLine($"Authorizations: {JsonSerializer.Serialize(authorizations, jsonOptions)}");
 
@@ -102,7 +104,7 @@ partial class AcmeClient
 
         return (cert, key);
 
-        async Task<AcmeChallengeGroup[]> GetAuthorizationChallengesAsync(AcmeOrder order, CancellationToken cancellationToken)
+        async Task<AcmeChallengeGroup[]> GetAuthorizationChallengesAsync(bool hasWildcard, AcmeOrder order, CancellationToken cancellationToken)
         {
             Dictionary<string, AcmeChallengeGroup> pairs = new ();
             foreach(var a in order.Authorizations){
@@ -123,6 +125,11 @@ partial class AcmeClient
                     if (c.Type == "dns-01")
                     {
                         c.KeyAuthorization = Signer.SHA256Base64Url(c.KeyAuthorization);
+                        g.Challenges.Add(c);
+                        continue;
+                    }
+                    if(hasWildcard) {
+                        continue;
                     }
                     g.Challenges.Add(c);
                 }
@@ -130,7 +137,9 @@ partial class AcmeClient
             var list = new List<AcmeChallengeGroup>();
             foreach(var kvp in pairs)
             {
-                list.Add(kvp.Value);
+                if (kvp.Value.Challenges.Any()) {
+                    list.Add(kvp.Value);
+                }
             }
             return list.ToArray();
         }

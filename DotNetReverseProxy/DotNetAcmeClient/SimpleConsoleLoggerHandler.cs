@@ -16,7 +16,8 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
     {
         // 1. Log the outgoing request
         var sb = new StringBuilder();
-        sb.AppendLine($"[HTTP Request] {request.Method} {request.RequestUri}");
+        var firstLine = $"[HTTP Request] {request.Method} {request.RequestUri}";
+        sb.AppendLine(firstLine);
 
         foreach(var k in request.Headers)
         {
@@ -52,7 +53,9 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
             sb.AppendLine($"[HTTP Response] {k.Key}: {string.Join("\n\t",k.Value)}");
         }
 
-        Console.WriteLine(sb.ToString());
+        if(!firstLine.EndsWith("/new-nonce")) {
+            Console.WriteLine(sb.ToString());
+        }
 
         return response;
     }
