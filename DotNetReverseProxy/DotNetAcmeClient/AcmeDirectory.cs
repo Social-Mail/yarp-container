@@ -1,12 +1,25 @@
+using System.Text.Json.Serialization;
+
 namespace DotNetAcmeClient;
 
 // Data Models
 public class AcmeDirectory
 {
+    [JsonPropertyName("newAccount")]
     public string NewAccount { get; set; }
+
+    [JsonPropertyName("newOrder")]
     public string NewOrder { get; set; }
+
+    [JsonPropertyName("newNonce")]
     public string NewNonce { get; set; }
+
+    [JsonPropertyName("revokeCert")]
     public string RevokeCert { get; set; }
+
+    [JsonPropertyName("keyChange")]
     public string KeyChange { get; set; }
+
+    [JsonPropertyName("meta")]
     public string Meta { get; set; }
 }

@@ -26,7 +26,9 @@ public partial class AcmeClient
     private AcmeDirectory _directory;
     private JsonWebKey? jwk;
 
-    private System.Text.Json.JsonSerializerOptions jsonOptions = new JsonSerializerOptions { DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull };
+    private System.Text.Json.JsonSerializerOptions jsonOptions = new JsonSerializerOptions {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+    };
 
     public AcmeClient(HttpClient httpClient, string directoryUrl, string accountKeyPath)
     {
@@ -90,6 +92,7 @@ public partial class AcmeClient
     {
         var request = RequestBuilder.Get(_directoryUrl);
         _directory = (await request.GetResponseAsync<AcmeDirectory>(_httpClient, cancellationToken))!;
+        Console.WriteLine($"Found: {_directory.NewAccount}");
         await EnsureAccountExistsAsync(cancellationToken);
     }
 

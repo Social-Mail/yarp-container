@@ -15,6 +15,7 @@
 	<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.19.1" />
     <PackageReference Include="NeuroSpeech.RetroCoreFit" Version="2.1.25" />
     <PackageReference Include="Nager.PublicSuffix" Version="3.8.0" />
+    <PackageReference Include="AWSSDK.Route53" Version="3.7.405.24" />
   </ItemGroup>
 
 </Project>

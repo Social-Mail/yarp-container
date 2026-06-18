@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
 using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.Transforms;
 
@@ -62,6 +63,7 @@ public class Forwarder: IMiddleware
 
     public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
     {
+
         var start = DateTime.UtcNow;
 
         var error = await forwarder.SendAsync(httpContext, "http://" + httpContext.Request.Headers.Host, client, requestOptions,

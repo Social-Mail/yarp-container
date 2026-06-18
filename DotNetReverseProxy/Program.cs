@@ -98,6 +98,11 @@ try
             portOptions.UseHttps(tls);
         });
 
+        kestrel.Listen(ip, 80, portOptions =>
+        {
+            portOptions.Protocols = HttpProtocols.Http1;
+        });
+
     });
 
     builder.Services.AddMemoryCache();
@@ -121,6 +126,10 @@ try
     // Setup our own request transform class
     var requestOptions = new ForwarderRequestConfig { ActivityTimeout = TimeSpan.FromSeconds(100) };
     // app.UseHsts();
+
+    // we need to use this as soon as possible...
+    app.UseMiddleware<CertificateStore>();
+
     app.UseResponseCompression();
     app.UseRouting();
     app.UseSocialMailRateLimiter();
@@ -178,7 +187,14 @@ try
 
     // });
 
+    var store = app.Services.GetRequiredService<CertificateStore>();
+    await store.GetCertificate("*.nsmailer.in");
+
     app.Run();
+
+
+
+    // try
 
 
 

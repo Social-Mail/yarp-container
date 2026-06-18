@@ -5,11 +5,11 @@ services:
   tls-server:
     image: social-mail-yarp-proxy
     container_name: social-mail-yarp-proxy
-    restart: always
-    depends_on:
-      - web-server
+    restart: no
     build:
       context: .
     environment:
       - AWS_ACCESS_KEY=$AWS_ACCESS_KEY
       - AWS_ACCESS_KEY_SECRET=$AWS_ACCESS_KEY_SECRET
+      - AWS_ZONE_ID=Z05080003S98042TH84JI
+      - AWS_ZONE_SUFFIX=.le.nsmailer.in
