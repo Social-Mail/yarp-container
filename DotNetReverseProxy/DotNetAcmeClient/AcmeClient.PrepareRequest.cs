@@ -49,7 +49,7 @@ partial class AcmeClient
         content.Headers.ContentType.CharSet = "";
 
         return RequestBuilder.Post(url)
-            .Copntent(content);
+            .Content(content);
 
         JsonObject CreateSignedBody<T1>(string url, T1 payload, string? kid = null, string? nonce = null)
         {
