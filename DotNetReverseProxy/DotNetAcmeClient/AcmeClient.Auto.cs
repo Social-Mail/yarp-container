@@ -46,7 +46,7 @@ partial class AcmeClient
                 return Task.WhenAll(a.Challenges.Select(async (c) =>
                 {
                     try {
-                        await this.CompleteChallengeAsync(c.Uri, c.KeyAuthorization, done.Token);
+                        await this.CompleteChallengeAsync(a.Authorization.url, c.KeyAuthorization, done.Token);
                         authorizationSuccess = true;
                         done.Cancel();
                     } catch (Exception ex)
