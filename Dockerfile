@@ -5,7 +5,7 @@ WORKDIR /app
 # Copy solution and project files first for caching layers
 COPY ./*.sln ./
 COPY ./DotNetReverseProxy/DotNetReverseProxy.csproj ./DotNetReverseProxy/
-RUN dotnet restore ./DotNetReverseProxy/DotNetReverseProxy.csproj
+RUN dotnet restore ./DotNetReverseProxy/DotNetReverseProxy.csproj --no-cache
 
 # Copy the rest of the source code
 COPY . .
