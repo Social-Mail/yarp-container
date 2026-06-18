@@ -84,10 +84,11 @@ partial class AcmeClient
             Dictionary<string, AcmeChallengeGroup> pairs = new ();
             foreach(var a in order.Authorizations){
                 var auth = await this.GetAuthorizationAsync(a, cancellationToken);
-
-                if(!pairs.TryGetValue(auth.Identifier.Type, out var g))
+                var k = auth.Identifier.Type;
+                if(!pairs.TryGetValue(k, out var g))
                 {
-                    g = new AcmeChallengeGroup(domainName, auth.Identifier.Type, auth);
+                    g = new AcmeChallengeGroup(domainName, k, auth);
+                    pairs.Add(k, g);
                 }
 
                 var jwk = this.GetJwk();
