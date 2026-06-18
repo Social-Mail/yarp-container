@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using RetroCoreFit;
 
 namespace DotNetAcmeClient;
 
@@ -33,6 +34,6 @@ public class AcmeOrder
     [JsonPropertyName("location")]
     public string Location { get; set; }
 
-    [JsonPropertyName("url")]
+    [Header("location")]
     public string url {get;set;}
 }

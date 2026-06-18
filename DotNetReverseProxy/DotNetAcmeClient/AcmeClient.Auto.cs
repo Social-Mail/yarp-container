@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
+using RetroCoreFit;
 
 namespace DotNetAcmeClient;
 
@@ -15,6 +18,12 @@ namespace DotNetAcmeClient;
 
 partial class AcmeClient
 {
+
+    public async Task<AcmeOrder> RefreshOrder(string url, CancellationToken cancellationToken)
+    {
+        var request = await ApiRequest(_directory.NewOrder, (object)null, cancellationToken, true, false);
+        return (await request.GetResponseAsync<AcmeOrder>(this._httpClient, cancellationToken))!;
+    }
 
     public async Task<(string cert, string key)> CreateCertificateAsync(
         string domainName,
@@ -58,18 +67,28 @@ partial class AcmeClient
             }
         }
 
+        var orderReady = false;
         for(int i=0;i<30;i++)
         {
             await Task.Delay(TimeSpan.FromSeconds(10));
 
-            await this.RefreshOrder(order.url)
+            var o = await this.RefreshOrder(order.url, cancellationToken);
+            if (Regex.IsMatch("valid|ready", o.Status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
+            {
+                orderReady = true;
+                break;
+            }
         }
 
-        if (!authorizationSuccess)
+        if(!orderReady)
         {
-            var error = "[" + String.Join(",\n", list ) + "]";
-            Console.WriteLine(error);
-            throw new InvalidOperationException(error);
+            
+            if (!authorizationSuccess)
+            {
+                var error = "[" + String.Join(",\n", list ) + "]";
+                Console.WriteLine(error);
+                throw new InvalidOperationException(error);
+            }
         }
 
         var csr = GenerateCsr(hostNames);

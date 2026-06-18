@@ -47,6 +47,11 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
         // 3. Log the incoming response
         sb.AppendLine($"[HTTP Response] {(int)response.StatusCode} {response.StatusCode} ({stopwatch.ElapsedMilliseconds}ms)\n\n");
 
+        foreach(var k in response.Headers)
+        {
+            sb.AppendLine($"[HTTP Response] {k.Key}: {string.Join("\n\t",k.Value)}");
+        }
+
         Console.WriteLine(sb.ToString());
 
         return response;
