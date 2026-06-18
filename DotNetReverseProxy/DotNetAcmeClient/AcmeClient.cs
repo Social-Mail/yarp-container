@@ -24,7 +24,7 @@ public partial class AcmeClient
     private RSA _accountKey;
     private string _accountUrl;
     private AcmeDirectory _directory;
-    private JsonWebKey? jwk;
+    private AcmeJwk? jwk;
 
     private System.Text.Json.JsonSerializerOptions jsonOptions = new JsonSerializerOptions {
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
@@ -175,19 +175,12 @@ public partial class AcmeClient
 
 
     // Helper method to create JWK for signing
-    private JsonWebKey GetJwk()
+    private AcmeJwk GetJwk()
     {
         if (this.jwk != null)
             return jwk;
 
-        var rsaParams = _accountKey.ExportParameters(false);
-        jwk = JsonWebKeyConverter.ConvertFromRSASecurityKey(new RsaSecurityKey(rsaParams));
-        jwk.D = null;
-        jwk.P = null;
-        jwk.Q = null;
-        jwk.DP = null;
-        jwk.DQ = null;
-        jwk.QI = null;
+        jwk = new AcmeJwk(_accountKey);
         return jwk;
     }
 }

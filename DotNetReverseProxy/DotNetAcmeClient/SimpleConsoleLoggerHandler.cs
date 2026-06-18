@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,6 +25,13 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
             foreach(var k in request.Content.Headers)
             {
                 Console.WriteLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
+            }
+
+            if (request.Content is StringContent sc)
+            {
+                var ms = new MemoryStream();
+                await sc.CopyToAsync(ms);
+                Console.WriteLine( System.Text.Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
 

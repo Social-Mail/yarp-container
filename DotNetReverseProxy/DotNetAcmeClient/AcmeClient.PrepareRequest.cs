@@ -1,4 +1,5 @@
-﻿using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.AspNetCore.Http.Json;
+using Microsoft.IdentityModel.Tokens;
 using RetroCoreFit;
 using System;
 using System.Linq;
@@ -33,38 +34,41 @@ partial class AcmeClient
         }
 
 
+        JsonObject node = (System.Text.Json.JsonSerializer.SerializeToNode(payload) as JsonObject)!;
+
         if (includeExternalAccountBinding && _externalKid != null)
         {
             var jwk = this.GetJwk();
 
             // this is trickey part, we need to convert to JsonElement and inject property
-            JsonObject node = (System.Text.Json.JsonSerializer.SerializeToNode(payload) as JsonObject)!;
             node.Add("externalAccountBinding", CreateSignedHmacBody(_externalHmacKey, url, jwk, kid: _externalKid));
         }
 
 
-        var data = CreateSignedBody(url, payload, kid: kid, nonce: nonce);
+        var data = CreateSignedBody(url, node, kid: kid, nonce: nonce);
 
-        var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { data}), System.Text.Encoding.UTF8, "application/jose+json");
+        var json = System.Text.Json.JsonSerializer.Serialize(data);
+
+        var content = new StringContent(json, System.Text.Encoding.UTF8, "application/jose+json");
         content.Headers.ContentType.CharSet = "";
 
         return RequestBuilder.Post(url)
             .Content(content);
 
-        JsonObject CreateSignedBody<T1>(string url, T1 payload, string? kid = null, string? nonce = null)
+        JsonObject CreateSignedBody(string url, JsonObject payload, string? kid = null, string? nonce = null)
         {
             var jwk = this.GetJwk();
             var headerAlg = "RS256";
             var signerAlg = "SHA256";
-            if (jwk.Crv != null && jwk.Kty.Equals("KC", StringComparison.OrdinalIgnoreCase))
+            if (jwk.crv != null && jwk.kty.Equals("KC", StringComparison.OrdinalIgnoreCase))
             {
                 headerAlg = "ES256";
-                if (jwk.Crv == "P-384")
+                if (jwk.crv == "P-384")
                 {
                     headerAlg = "ES384";
                     signerAlg = "SHA384";
                 }
-                else if (jwk.Crv == "P-521" || jwk.Crv == "P-512")
+                else if (jwk.crv == "P-521" || jwk.crv == "P-512")
                 {
                     headerAlg = "ES512";
                     signerAlg = "SHA512";
@@ -77,13 +81,14 @@ partial class AcmeClient
             var p = (result["payload"] as JsonValue)!.ToString();
 
             var signature = SignJws(signerAlg, @protected, p, this._accountKey);
+            result.Add("signature", signature);
 
             return result;
         }
 
-        JsonObject PrepareSignedBody<T1>(string alg, string url, T1 payload, string? kid = null, string? nonce = null)
+        JsonObject PrepareSignedBody(string alg, string url, JsonObject payload, string? kid = null, string? nonce = null)
         {
-            JsonWebKey? jwk = null;
+            AcmeJwk? jwk = null;
             if (kid == null)
             {
                 jwk = this.GetJwk();
@@ -99,14 +104,15 @@ partial class AcmeClient
 
             return (System.Text.Json.JsonSerializer.SerializeToNode(new
             {
-                payload = payload == null ? "" : Base64UrlEncoder.Encode(System.Text.Json.JsonSerializer.Serialize(payload, jsonOptions)),
+                payload = payload == null ? "" : Base64UrlEncoder.Encode(payload.ToJsonString(jsonOptions)),
                 @protected = Base64UrlEncoder.Encode(System.Text.Json.JsonSerializer.Serialize(header, jsonOptions))
             }, jsonOptions) as JsonObject)!;
 
         }
 
-        JsonNode CreateSignedHmacBody<T1>(string hmacKey, string url, T1 payload, string? kid = null, string? nonce = null)
+        JsonNode CreateSignedHmacBody(string hmacKey, string url, AcmeJwk jwk, string? kid = null, string? nonce = null)
         {
+            var payload = System.Text.Json.JsonSerializer.SerializeToNode(jwk, jsonOptions) as JsonObject;
             var result = PrepareSignedBody("HS256", url, payload, kid, nonce);
 
             var key = Convert.FromBase64String(hmacKey);
