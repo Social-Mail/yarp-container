@@ -89,21 +89,21 @@ public partial class AcmeClient
         }
     }
 
-    public async Task InitializeAsync(CancellationToken cancellationToken = default)
+    public async Task InitializeAsync( string emailAddress, CancellationToken cancellationToken = default)
     {
         var request = RequestBuilder.Get(_directoryUrl);
         _directory = (await request.GetResponseAsync<AcmeDirectory>(_httpClient, cancellationToken))!;
         Console.WriteLine($"Found: {_directory.NewAccount}");
-        await EnsureAccountExistsAsync(cancellationToken);
+        await EnsureAccountExistsAsync(emailAddress, cancellationToken);
     }
 
-    private async Task EnsureAccountExistsAsync(CancellationToken cancellationToken = default)
+    private async Task EnsureAccountExistsAsync(string emailAddress, CancellationToken cancellationToken = default)
     {
 
         var payload = new
         {
             termsOfServiceAgreed = true,
-            contact = new[] { "mailto:admin@example.com" }
+            contact = new[] { "mailto:" + emailAddress}
         };
 
         var ar = await this.ApiRequest(_directory.NewAccount, payload, cancellationToken, false, true);

@@ -22,9 +22,7 @@ partial class AcmeClient
     )
     {
         // this will not save the certificate
-        await this.InitializeAsync(cancellationToken);
-
-        await this.EnsureAccountExistsAsync(cancellationToken);
+        await this.InitializeAsync("akash@nsmailer.in", cancellationToken);
 
         var order = await this.CreateOrderAsync(hostNames, cancellationToken);
 
