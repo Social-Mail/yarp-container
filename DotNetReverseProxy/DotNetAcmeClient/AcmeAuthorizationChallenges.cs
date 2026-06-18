@@ -4,14 +4,15 @@ namespace DotNetAcmeClient;
 
 public class AcmeChallengeGroup
 {
-    public readonly string Type;
+    public string Type {get;}
 
-    public readonly string DomainName;
-    public readonly AcmeAuthorization Authorization;
-    public readonly List<AcmeChallenge> Challenges = new List<AcmeChallenge>();
+    public string DomainName  {get;}
+    public AcmeAuthorization Authorization  {get;}
+    public List<AcmeChallenge> Challenges  {get;}
 
     public AcmeChallengeGroup(string domainName, string type, AcmeAuthorization authorization)
     {
+        Challenges = new ();
         this.Type = type;
         this.DomainName = domainName;
         this.Authorization = authorization;
