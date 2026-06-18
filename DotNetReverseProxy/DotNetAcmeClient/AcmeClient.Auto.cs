@@ -102,6 +102,8 @@ partial class AcmeClient
 
         var result = await this.FinalizeOrderAsync(order.Finalize, csr, cancellationToken);
 
+        Console.WriteLine(JsonSerializer.Serialize(result));
+
         var cert = await this.DownloadCertificateAsync(result.Certificate, cancellationToken);
 
         return cert;

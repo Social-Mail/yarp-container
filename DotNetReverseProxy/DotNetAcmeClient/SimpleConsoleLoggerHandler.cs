@@ -19,24 +19,24 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
         var firstLine = $"[HTTP Request] {request.Method} {request.RequestUri}";
         sb.AppendLine(firstLine);
 
-        foreach(var k in request.Headers)
-        {
-            sb.AppendLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
-        }
+        // foreach(var k in request.Headers)
+        // {
+        //     sb.AppendLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
+        // }
 
-        if (request.Content != null) {
-            foreach(var k in request.Content.Headers)
-            {
-                sb.AppendLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
-            }
+        // if (request.Content != null) {
+        //     foreach(var k in request.Content.Headers)
+        //     {
+        //         sb.AppendLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
+        //     }
 
-            if (request.Content is StringContent sc)
-            {
-                var ms = new MemoryStream();
-                await sc.CopyToAsync(ms);
-                sb.AppendLine( System.Text.Encoding.UTF8.GetString(ms.ToArray()));
-            }
-        }
+        //     if (request.Content is StringContent sc)
+        //     {
+        //         var ms = new MemoryStream();
+        //         await sc.CopyToAsync(ms);
+        //         sb.AppendLine( System.Text.Encoding.UTF8.GetString(ms.ToArray()));
+        //     }
+        // }
 
         var stopwatch = Stopwatch.StartNew();
         
@@ -48,10 +48,10 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
         // 3. Log the incoming response
         sb.AppendLine($"[HTTP Response] {(int)response.StatusCode} {response.StatusCode} ({stopwatch.ElapsedMilliseconds}ms)\n\n");
 
-        foreach(var k in response.Headers)
-        {
-            sb.AppendLine($"[HTTP Response] {k.Key}: {string.Join("\n\t",k.Value)}");
-        }
+        // foreach(var k in response.Headers)
+        // {
+        //     sb.AppendLine($"[HTTP Response] {k.Key}: {string.Join("\n\t",k.Value)}");
+        // }
 
         if(!firstLine.EndsWith("/new-nonce")) {
             Console.WriteLine(sb.ToString());
