@@ -28,8 +28,6 @@ using System.Threading.Tasks;
 using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.Transforms;
 
-// ThreadPool.QueueUserWorkItem(async (x) => {
-
 try
 {
 
@@ -45,8 +43,6 @@ try
 #pragma warning restore CA2252 // This API requires opting into preview features
 
     var weakTable = new ConditionalWeakTable<object, UnixDomainSocketEndPoint>();
-
-    var store = new CertificateStore();
 
     MemoryCache cache = new MemoryCache(new MemoryCacheOptions { });
 
@@ -65,6 +61,9 @@ try
 
     builder.WebHost.ConfigureKestrel(kestrel =>
     {
+
+        var store = kestrel.ApplicationServices.GetRequiredService<CertificateStore>();
+
         var tls = new TlsHandshakeCallbackOptions
         {
             OnConnection = async (c) =>
@@ -91,16 +90,6 @@ try
             },
         };
 
-        //var udp = new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
-        //udp.Bind(new IPEndPoint(IPAddress.Parse("0.0.0.0"), 443));
-        //var tcp = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        //tcp.Bind(new IPEndPoint(IPAddress.Parse("0.0.0.0"), 443));
-
-        //kestrel.ListenHandle((ulong)tcp.Handle, portOptions =>
-        //{
-        //    portOptions.Protocols = HttpProtocols.Http1AndHttp2;
-        //    portOptions.UseHttps(tls);
-        //});
 
         var ip = new IPAddress([0, 0, 0, 0]);
         kestrel.Listen(ip, 443, portOptions =>
@@ -109,14 +98,12 @@ try
             portOptions.UseHttps(tls);
         });
 
-        //kestrel.ListenAnyIP(443, portOptions => {
-        //    portOptions.Protocols = HttpProtocols.Http1AndHttp2;
-        //    portOptions.UseHttps(tls);
-        //});
     });
 
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
+    builder.Services.AddSingleton<CertificateStore>();
+    builder.Services.AddSingleton<Forwarder>();
     builder.Services.AddResponseCompression((options) =>
     {
         options.EnableForHttps = true;
@@ -129,50 +116,7 @@ try
 
     builder.Services.AddSocialMailRateLimiter();
 
-    // builder.Services.AddHsts(options =>
-    // {
-    //     options.Preload = true;
-    //     options.IncludeSubDomains = true;
-    //     options.MaxAge = TimeSpan.FromDays(30); // Recommended: 1 year or more
-    //     // options.ExcludedHosts.Add("test.example.com"); // Optional: ignore specific hosts
-    // });    
-
     var app = builder.Build();
-
-    // Configure our own HttpMessageInvoker for outbound calls for proxy operations
-    var httpClient = new HttpMessageInvoker(new SocketsHttpHandler
-    {
-        UseProxy = false,
-        AllowAutoRedirect = false,
-        AutomaticDecompression = DecompressionMethods.None,
-        UseCookies = false,
-        ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
-        // KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always,
-        // KeepAlivePingDelay = TimeSpan.FromSeconds(15),
-        // KeepAlivePingTimeout = TimeSpan.FromMinutes(1),
-        ConnectTimeout = TimeSpan.FromSeconds(15),
-        // PooledConnectionLifetime = TimeSpan.FromMinutes(15),
-        // PooledConnectionIdleTimeout = TimeSpan.FromMinutes(5),
-        // MaxConnectionsPerServer = 100,
-        ConnectCallback = async (context, cancellationToken) =>
-        {
-            var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-            try
-            {
-                var host = context.InitialRequestMessage.Headers.Host;
-                var fwd = await store.GetCertificate(host);
-                var port = new UnixDomainSocketEndPoint(fwd.Port);
-                await socket.ConnectAsync(port, cancellationToken).ConfigureAwait(false);
-                return new NetworkStream(socket, true);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"{ex}");
-                socket.Dispose();
-                throw;
-            }
-        }
-    });
 
     // Setup our own request transform class
     var requestOptions = new ForwarderRequestConfig { ActivityTimeout = TimeSpan.FromSeconds(100) };
@@ -180,57 +124,59 @@ try
     app.UseResponseCompression();
     app.UseRouting();
     app.UseSocialMailRateLimiter();
+    app.UseMiddleware<Forwarder>();
 
-    // When using IHttpForwarder for direct forwarding you are responsible for routing, destination discovery, load balancing, affinity, etc..
-    // For an alternate example that includes those features see BasicYarpSample.
-    app.Map("/{**catch-all}", async (HttpContext httpContext, IHttpForwarder forwarder) =>
-    {
+    // // When using IHttpForwarder for direct forwarding you are responsible for routing, destination discovery, load balancing, affinity, etc..
+    // // For an alternate example that includes those features see BasicYarpSample.
+    // app.Map("/{**catch-all}", async (HttpContext httpContext, IHttpForwarder forwarder) =>
+    // {
 
-        var start = DateTime.UtcNow;
+    //     var start = DateTime.UtcNow;
+    //     var forwarder = httpContext.RequestServices.GetRequiredService<Forwarder>();
 
-        var error = await forwarder.SendAsync(httpContext, "http://" + httpContext.Request.Headers.Host, httpClient, requestOptions,
-            (context, proxyRequest) =>
-            {
-                var responseHeaders = context.Response.Headers;
-                responseHeaders.TryAdd("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-                responseHeaders.TryAdd("X-Content-Type-Options", "nosniff");
-                responseHeaders.TryAdd("X-Frame-Options", "SAMEORIGIN");
-                responseHeaders.TryAdd("Referrer-Policy", "same-origin");
+    //     var error = await forwarder.SendAsync(httpContext, "http://" + httpContext.Request.Headers.Host, httpClient, requestOptions,
+    //         (context, proxyRequest) =>
+    //         {
+    //             var responseHeaders = context.Response.Headers;
+    //             responseHeaders.TryAdd("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+    //             responseHeaders.TryAdd("X-Content-Type-Options", "nosniff");
+    //             responseHeaders.TryAdd("X-Frame-Options", "SAMEORIGIN");
+    //             responseHeaders.TryAdd("Referrer-Policy", "same-origin");
 
-                // Customize the query string:
-                var queryContext = new QueryTransformContext(context.Request);
-                var ip = context.Connection.RemoteIpAddress;
-                if (ip != null)
-                {
-                    proxyRequest.Headers.TryAddWithoutValidation("x-forwarded-for", ip.ToString());
-                }
+    //             // Customize the query string:
+    //             var queryContext = new QueryTransformContext(context.Request);
+    //             var ip = context.Connection.RemoteIpAddress;
+    //             if (ip != null)
+    //             {
+    //                 proxyRequest.Headers.TryAddWithoutValidation("x-forwarded-for", ip.ToString());
+    //             }
 
-                // Assign the custom uri. Be careful about extra slashes when concatenating here. RequestUtilities.MakeDestinationAddress is a safe default.
-                proxyRequest.RequestUri = RequestUtilities.MakeDestinationAddress("http://" + proxyRequest.Headers.Host, context.Request.Path, queryContext.QueryString);
-                proxyRequest.Version = HttpVersion.Version11;
-                return default;
-            });
+    //             // Assign the custom uri. Be careful about extra slashes when concatenating here. RequestUtilities.MakeDestinationAddress is a safe default.
+    //             proxyRequest.RequestUri = RequestUtilities.MakeDestinationAddress("http://" + proxyRequest.Headers.Host, context.Request.Path, queryContext.QueryString);
+    //             proxyRequest.Version = HttpVersion.Version11;
+    //             return default;
+    //         });
 
 
-        Exception? exception = null;
+    //     Exception? exception = null;
 
-        // Check if the proxy operation was successful
-        if (error != ForwarderError.None)
-        {
-            var errorFeature = httpContext.Features.Get<IForwarderErrorFeature>();
-            if (errorFeature != null)
-            {
-                exception = errorFeature.Exception;
-                if (exception != null)
-                {
-                    Console.WriteLine(exception.ToString());
-                }
-            }
-        }
+    //     // Check if the proxy operation was successful
+    //     if (error != ForwarderError.None)
+    //     {
+    //         var errorFeature = httpContext.Features.Get<IForwarderErrorFeature>();
+    //         if (errorFeature != null)
+    //         {
+    //             exception = errorFeature.Exception;
+    //             if (exception != null)
+    //             {
+    //                 Console.WriteLine(exception.ToString());
+    //             }
+    //         }
+    //     }
 
-        httpContext.RegisterStatus(DateTime.UtcNow - start, exception);
+    //     httpContext.RegisterStatus(DateTime.UtcNow - start, exception);
 
-    });
+    // });
 
     app.Run();
 
@@ -242,4 +188,3 @@ catch (Exception ex)
     Console.WriteLine(ex);
     throw new Exception("Closed", ex);
 }
-// }, null);
