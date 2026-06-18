@@ -107,9 +107,13 @@ public partial class AcmeClient
         };
 
         var ar = await this.ApiRequest(_directory.NewAccount, payload, cancellationToken, false, true);
-        var ac = (await ar.GetResponseAsync<ApiResponse<AcmeAccount>>(_httpClient, cancellationToken))!;
+        var ac = (await ar.GetResponseAsync(_httpClient, cancellationToken))!;
 
-        this._accountUrl = ac.Headers["location"];
+        var location = ac.Headers.Location?.ToString();
+        if (location != null)
+        {
+            this._accountUrl = location;
+        }
 
     }
 
