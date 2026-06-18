@@ -154,6 +154,9 @@ public class CertificateStore: IMiddleware
             }
         });
 
+        // we will let it propogate first..
+        await Task.Delay(TimeSpan.FromSeconds(15));
+
         d.Add(async () =>
         {
             await c.ChangeResourceRecordSetsAsync(new ChangeResourceRecordSetsRequest
