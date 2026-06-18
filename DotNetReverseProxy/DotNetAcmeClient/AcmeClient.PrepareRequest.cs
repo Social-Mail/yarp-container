@@ -2,6 +2,7 @@
 using RetroCoreFit;
 using System;
 using System.Linq;
+using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
@@ -44,8 +45,11 @@ partial class AcmeClient
 
         var data = CreateSignedBody(url, payload, kid: kid, nonce: nonce);
 
+        var content = new StringContent(System.Text.Json.JsonSerializer.Serialize(new { data}), System.Text.Encoding.UTF8, "application/jose+json");
+        content.Headers.ContentType.CharSet = "";
+
         return RequestBuilder.Post(url)
-            .Body(new { data }, jsonOptions, "application/jose+json");
+            .Copntent(content);
 
         JsonObject CreateSignedBody<T1>(string url, T1 payload, string? kid = null, string? nonce = null)
         {

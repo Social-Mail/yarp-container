@@ -15,6 +15,18 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
         // 1. Log the outgoing request
         Console.WriteLine($"[HTTP Request] {request.Method} {request.RequestUri}");
 
+        foreach(var k in request.Headers)
+        {
+            Console.WriteLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
+        }
+
+        if (request.Content != null) {
+            foreach(var k in request.Content.Headers)
+            {
+                Console.WriteLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
+            }
+        }
+
         var stopwatch = Stopwatch.StartNew();
         
         // 2. Pass the request down the pipeline to execute it
@@ -23,7 +35,7 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
         stopwatch.Stop();
 
         // 3. Log the incoming response
-        Console.WriteLine($"[HTTP Response] {(int)response.StatusCode} {response.StatusCode} ({stopwatch.ElapsedMilliseconds}ms)");
+        Console.WriteLine($"[HTTP Response] {(int)response.StatusCode} {response.StatusCode} ({stopwatch.ElapsedMilliseconds}ms)\n\n");
 
         return response;
     }

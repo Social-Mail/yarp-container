@@ -21,5 +21,5 @@ public class AcmeDirectory
     public string KeyChange { get; set; }
 
     [JsonPropertyName("meta")]
-    public string Meta { get; set; }
+    public System.Text.Json.Nodes.JsonNode Meta { get; set; }
 }
