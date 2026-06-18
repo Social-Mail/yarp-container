@@ -111,7 +111,7 @@ partial class AcmeClient
         async Task WaitForValidChallengeAsync(string url, CancellationToken cancellationToken)
         {
             for(int i=0;i<30;i++) {
-                var request = await ApiRequest(url, new { }, cancellationToken, true, false);
+                var request = await ApiRequest(url, (object)null, cancellationToken, true, false);
                 var c = await request.GetResponseAsync<AcmeChallenge>(_httpClient, cancellationToken);
                 if (Regex.IsMatch("valid|ready", c.Status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
                 {
