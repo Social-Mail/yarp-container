@@ -10,3 +10,6 @@ services:
       - web-server
     build:
       context: .
+    environment:
+      - AWS_ACCESS_KEY=$AWS_ACCESS_KEY
+      - AWS_ACCESS_KEY_SECRET=$AWS_ACCESS_KEY_SECRET

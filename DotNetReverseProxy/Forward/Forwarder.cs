@@ -45,7 +45,7 @@ public class Forwarder: IMiddleware
                     } else
                     {
                         socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                        var port = new DnsEndPoint(portAddress.Host, portAddress.Port);
+                        var port = new DnsEndPoint(portAddress.Host ?? "localhost", portAddress.Port);
                         await socket.ConnectAsync(port, cancellationToken).ConfigureAwait(false);
                     }
                     return new NetworkStream(socket, true);

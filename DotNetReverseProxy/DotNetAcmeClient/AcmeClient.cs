@@ -93,7 +93,7 @@ public partial class AcmeClient
         await EnsureAccountExistsAsync(cancellationToken);
     }
 
-    private async Task EnsureAccountExistsAsync(CancellationToken cancellationToken)
+    private async Task EnsureAccountExistsAsync(CancellationToken cancellationToken = default)
     {
 
         var payload = JsonSerializer.Serialize(new

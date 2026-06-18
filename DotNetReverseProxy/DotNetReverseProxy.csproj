@@ -14,6 +14,7 @@
     <PackageReference Include="Yarp.ReverseProxy" Version="2.3.0" />
 	<PackageReference Include="Microsoft.IdentityModel.Tokens" Version="8.19.1" />
     <PackageReference Include="NeuroSpeech.RetroCoreFit" Version="2.1.25" />
+    <PackageReference Include="Nager.PublicSuffix" Version="3.8.0" />
   </ItemGroup>
 
 </Project>
