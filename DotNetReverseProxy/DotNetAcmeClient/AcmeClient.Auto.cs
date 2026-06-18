@@ -101,17 +101,17 @@ partial class AcmeClient
 
         var csr = GenerateCsr(domainKey, hostNames);
 
-        var result = await this.FinalizeOrderAsync(order.Finalize, csr, cancellationToken);
+        await this.FinalizeOrderAsync(order.Finalize, csr, cancellationToken);
 
-        Console.WriteLine(JsonSerializer.Serialize(result));
+        var result = await WaitForValidChallengeAsync(order.url, cancellationToken);
 
-        await WaitForValidChallengeAsync(order.url, cancellationToken);
+        var certificate = (result["certificate"] as JsonValue).ToString();
 
-        var cert = await this.DownloadCertificateAsync(result.Certificate, cancellationToken);
+        var cert = await this.DownloadCertificateAsync(certificate, cancellationToken);
 
         return cert;
 
-        async Task WaitForValidChallengeAsync(string url, CancellationToken cancellationToken)
+        async Task<System.Text.Json.Nodes.JsonObject> WaitForValidChallengeAsync(string url, CancellationToken cancellationToken)
         {
             for(int i=0;i<30;i++) {
                 var request = await ApiRequest(url, (object)null, cancellationToken, true, false);
@@ -120,10 +120,12 @@ partial class AcmeClient
                 Console.WriteLine(c.ToJsonString());
                 if (Regex.IsMatch("valid|ready", status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
                 {
-                    return;
+                    return c;
                 }
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
+
+            return null;
 
         }
 
