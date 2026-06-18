@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
@@ -81,10 +82,16 @@ public class CertificateStore: IMiddleware
         {
             names = new [] { apex.domain, serverName };
         }
-        await client.CreateCertificateAsync(apex.domain, names, this.SaveChallengesAsync);
 
-        // we sill analyze the serverName and get the Apex Domain
-        throw new NotImplementedException();
+        using RSA domainKey = RSA.Create(2048);
+        var cert = await client.CreateCertificateAsync(domainKey, apex.domain, names, this.SaveChallengesAsync);
+
+        string privateKeyPem = domainKey.ExportRSAPrivateKeyPem();
+        return new CertificateInfo
+        {
+            Cert = cert,
+            Key = privateKeyPem
+        };
     }
 
     async Task<IAsyncDisposable> SaveChallengesAsync(AcmeChallengeGroup[] challenges, CancellationToken token)

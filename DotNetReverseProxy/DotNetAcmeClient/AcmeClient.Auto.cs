@@ -25,7 +25,8 @@ partial class AcmeClient
         return (await request.GetResponseAsync<AcmeOrder>(this._httpClient, cancellationToken))!;
     }
 
-    public async Task<(string cert, string key)> CreateCertificateAsync(
+    public async Task<string> CreateCertificateAsync(
+        RSA domainKey,
         string domainName,
         string[] hostNames,
         Func<AcmeChallengeGroup[], CancellationToken,Task<IAsyncDisposable>> applyChallenges,
@@ -97,16 +98,13 @@ partial class AcmeClient
             }
         }
 
-        var csr = GenerateCsr(hostNames);
+        var csr = GenerateCsr(domainKey, hostNames);
 
         var result = await this.FinalizeOrderAsync(order.Finalize, csr, cancellationToken);
 
         var cert = await this.DownloadCertificateAsync(result.Certificate, cancellationToken);
 
-        var key = _accountKey.ExportRSAPrivateKeyPem();
-
-
-        return (cert, key);
+        return cert;
 
         async Task WaitForValidChallengeAsync(string url, CancellationToken cancellationToken)
         {
@@ -163,11 +161,14 @@ partial class AcmeClient
             return list.ToArray();
         }
 
-        string GenerateCsr(IEnumerable<string> domains, CancellationToken cancellationToken = default)
+        string GenerateCsr(RSA domainKey, IEnumerable<string> domains, CancellationToken cancellationToken = default)
         {
             var subject = new X500DistinguishedName($"CN={domains.First()}");
-            var request = new CertificateRequest(subject, _accountKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+    
+            // 2. Initialize a clean CertificateRequest using your DOMAIN key pair
+            var request = new CertificateRequest(subject, domainKey, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
             
+            // 3. Populate your Subject Alternative Names (SANs)
             var sanBuilder = new SubjectAlternativeNameBuilder();
             foreach (var domain in domains)
             {
@@ -175,8 +176,16 @@ partial class AcmeClient
             }
             request.CertificateExtensions.Add(sanBuilder.Build());
 
-            var certificate = request.CreateSelfSigned(DateTimeOffset.Now, DateTimeOffset.Now.AddYears(1));
-            return Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
+            // 4. CRITICAL FIX: Create a raw PKCS#10 CSR byte block instead of a self-signed cert
+            byte[] rawCsrDerBytes = request.CreateSigningRequest();
+
+            // 5. Convert the raw ASN.1 DER bytes to a clean web-safe Base64Url string
+            string base64UrlCsr = Convert.ToBase64String(rawCsrDerBytes)
+                .Replace("+", "-")
+                .Replace("/", "_")
+                .TrimEnd('=');
+
+            return base64UrlCsr;
         }        
     }
 
