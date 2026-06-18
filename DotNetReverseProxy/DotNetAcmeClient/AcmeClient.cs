@@ -100,11 +100,11 @@ public partial class AcmeClient
     private async Task EnsureAccountExistsAsync(CancellationToken cancellationToken = default)
     {
 
-        var payload = JsonSerializer.Serialize(new
+        var payload = new
         {
             termsOfServiceAgreed = true,
             contact = new[] { "mailto:admin@example.com" }
-        });
+        };
 
         var ar = await this.ApiRequest(_directory.NewAccount, payload, cancellationToken, false, true);
         var ac = (await ar.GetResponseAsync<AcmeAccount>(_httpClient, cancellationToken))!;
