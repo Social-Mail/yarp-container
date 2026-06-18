@@ -28,11 +28,11 @@ partial class AcmeClient
 
         var order = await this.CreateOrderAsync(hostNames, cancellationToken);
 
-        Console.WriteLine($"Order: {JsonSerializer.Serialize(order, jsonOptions)}");
+        // Console.WriteLine($"Order: {JsonSerializer.Serialize(order, jsonOptions)}");
 
         var authorizations = await GetAuthorizationChallengesAsync(order, cancellationToken);
 
-        Console.WriteLine($"Authorizations: {JsonSerializer.Serialize(authorizations, jsonOptions)}");
+        // Console.WriteLine($"Authorizations: {JsonSerializer.Serialize(authorizations, jsonOptions)}");
 
         await using var d = await applyChallenges(authorizations, cancellationToken);
 
@@ -75,7 +75,7 @@ partial class AcmeClient
 
         var csr = GenerateCsr(hostNames);
 
-        var result = await this.FinalizeOrderAsync(order.Location, csr, cancellationToken);
+        var result = await this.FinalizeOrderAsync(order.Finalize, csr, cancellationToken);
 
         var cert = await this.DownloadCertificateAsync(result.Certificate, cancellationToken);
 
@@ -88,18 +88,19 @@ partial class AcmeClient
         {
             Dictionary<string, AcmeChallengeGroup> pairs = new ();
             foreach(var a in order.Authorizations){
-                Console.WriteLine($"Fetching Authorization; {a}");
+                // Console.WriteLine($"Fetching Authorization; {a}");
                 var auth = await this.GetAuthorizationAsync(a, cancellationToken);
-                var k = auth.Identifier.Type;
-                if(!pairs.TryGetValue(k, out var g))
-                {
-                    g = new AcmeChallengeGroup(domainName, k, auth);
-                    pairs.Add(k, g);
-                }
 
                 var jwk = this.GetJwk();
                 var keysum = Signer.SHA256Base64Url(System.Text.Json.JsonSerializer.Serialize(jwk, jsonOptions));
                 foreach(var c in auth.Challenges) {
+                    var k = c.Type;
+                    if(!pairs.TryGetValue(k, out var g))
+                    {
+                        g = new AcmeChallengeGroup(domainName, k, auth);
+                        pairs.Add(k, g);
+                    }
+
                     c.KeyAuthorization = $"{c.Token}.{keysum}";
                     if (c.Type == "dns-01")
                     {
