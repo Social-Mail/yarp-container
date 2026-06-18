@@ -27,7 +27,8 @@ public partial class AcmeClient
     private JsonWebKey? jwk;
 
     private System.Text.Json.JsonSerializerOptions jsonOptions = new JsonSerializerOptions {
-        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
     };
 
     public AcmeClient(HttpClient httpClient, string directoryUrl, string accountKeyPath)
@@ -181,19 +182,12 @@ public partial class AcmeClient
 
         var rsaParams = _accountKey.ExportParameters(false);
         jwk = JsonWebKeyConverter.ConvertFromRSASecurityKey(new RsaSecurityKey(rsaParams));
+        jwk.D = null;
+        jwk.P = null;
+        jwk.Q = null;
+        jwk.DP = null;
+        jwk.DQ = null;
+        jwk.QI = null;
         return jwk;
-    }
-
-    private string Base64UrlEncode(string input)
-    {
-        var bytes = Encoding.UTF8.GetBytes(input);
-        var base64 = Convert.ToBase64String(bytes).ToLower();
-        return base64.Replace("+", "-").Replace("/", "_").TrimEnd('=');
-    }
-
-    private string Base64UrlEncode(byte[] input)
-    {
-        var base64 = Convert.ToBase64String(input).ToLower();
-        return base64.Replace("+", "-").Replace("/", "_").TrimEnd('=');
     }
 }

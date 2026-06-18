@@ -99,8 +99,8 @@ partial class AcmeClient
 
             return (System.Text.Json.JsonSerializer.SerializeToNode(new
             {
-                payload = payload == null ? "" : Base64UrlEncode(System.Text.Json.JsonSerializer.Serialize(payload, jsonOptions)),
-                @protected = Base64UrlEncode(System.Text.Json.JsonSerializer.Serialize(header, jsonOptions))
+                payload = payload == null ? "" : Base64UrlEncoder.Encode(System.Text.Json.JsonSerializer.Serialize(payload, jsonOptions)),
+                @protected = Base64UrlEncoder.Encode(System.Text.Json.JsonSerializer.Serialize(header, jsonOptions))
             }, jsonOptions) as JsonObject)!;
 
         }
@@ -118,7 +118,7 @@ partial class AcmeClient
 
             var signature = HMACSHA256.HashData(key, utf8.GetBytes($"{@protected}.{p}"));
 
-            result.Add("signature", Base64UrlEncode(signature));
+            result.Add("signature", Base64UrlEncoder.Encode(signature));
 
             return result;
         }
