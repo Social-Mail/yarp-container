@@ -130,7 +130,11 @@ public partial class AcmeClient
         var request = await ApiRequest(_directory.NewOrder, new { identifiers }, cancellationToken, true, false);
 
         var order = (await request.GetResponseAsync<ApiResponse<AcmeOrder>>(_httpClient, cancellationToken))!;
-        Console.WriteLine("Order-Location: " + order.Headers["location"]);
+        Console.WriteLine("Order-Location: " + order.Model.url);
+        foreach(var k in order.Headers)
+        {
+            Console.WriteLine($"{k.Key}: {k.Value}");
+        }
         return order.Model;
     }
 
