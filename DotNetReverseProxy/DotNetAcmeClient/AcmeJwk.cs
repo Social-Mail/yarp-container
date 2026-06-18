@@ -5,13 +5,14 @@ namespace DotNetAcmeClient;
 
 public class AcmeJwk
 {
-    public string kty {get;set;}
-
     public string e {get;set;}
 
-    public string n {get;set;}
-
     public string crv {get;set;}
+
+    public string kty {get;set;}
+
+
+    public string n {get;set;}
 
     public AcmeJwk(RSA key)
     {
