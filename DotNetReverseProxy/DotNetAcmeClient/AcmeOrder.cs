@@ -2,25 +2,16 @@ using System.Text.Json.Serialization;
 
 namespace DotNetAcmeClient;
 
-
 public class AcmeOrder
 {
 
-    public class Identifier
-    {
-        [JsonPropertyName("type")]
-        public string Type {get;set;}
-
-        [JsonPropertyName("value")]
-        public string Value {get;set;}
-    }
 
     [JsonPropertyName("status")]
     public string Status { get; set; }
 
 
     [JsonPropertyName("identifiers")]
-    public Identifier[] Identifiers { get; set; }
+    public AcmeIdentifier[] Identifiers { get; set; }
 
 
     [JsonPropertyName("notBefore")]

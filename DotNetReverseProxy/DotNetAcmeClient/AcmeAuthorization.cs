@@ -9,7 +9,7 @@ public class AcmeAuthorization
 
 
     [JsonPropertyName("identifier")]
-    public string Identifier { get; set; }
+    public AcmeIdentifier Identifier { get; set; }
 
 
     [JsonPropertyName("challenges")]
