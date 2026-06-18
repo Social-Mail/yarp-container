@@ -12,8 +12,8 @@ public class AcmeChallenge
     [JsonPropertyName("status")]
     public string Status { get; set; }
 
-    [JsonPropertyName("uri")]
-    public string Uri { get; set; }
+    [JsonPropertyName("url")]
+    public string url { get; set; }
 
 
     [JsonPropertyName("token")]

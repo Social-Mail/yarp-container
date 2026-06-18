@@ -32,4 +32,7 @@ public class AcmeOrder
 
     [JsonPropertyName("location")]
     public string Location { get; set; }
+
+    [JsonPropertyName("url")]
+    public string url {get;set;}
 }

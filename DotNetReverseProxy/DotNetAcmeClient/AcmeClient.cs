@@ -129,8 +129,9 @@ public partial class AcmeClient
 
         var request = await ApiRequest(_directory.NewOrder, new { identifiers }, cancellationToken, true, false);
 
-        var order = (await request.GetResponseAsync<AcmeOrder>(_httpClient, cancellationToken))!;
-        return order;
+        var order = (await request.GetResponseAsync<ApiResponse<AcmeOrder>>(_httpClient, cancellationToken))!;
+        Console.WriteLine("Order-Location: " + order.Headers["location"]);
+        return order.Model;
     }
 
     public async Task<AcmeAuthorization> GetAuthorizationAsync(string authorizationUrl, CancellationToken cancellationToken = default)
@@ -149,9 +150,9 @@ public partial class AcmeClient
     //     return (await request.GetResponseAsync<AcmeChallenge>(_httpClient, cancellationToken))!;
     // }
 
-    public async Task CompleteChallengeAsync(string challengeUrl, string keyAuthorization, CancellationToken cancellationToken = default)
+    public async Task CompleteChallengeAsync(string challengeUrl, CancellationToken cancellationToken = default)
     {
-        var request = await ApiRequest(challengeUrl, new { keyAuthorization }, cancellationToken, true, false);
+        var request = await ApiRequest(challengeUrl, new { }, cancellationToken, true, false);
         await request.GetResponseAsync(_httpClient, cancellationToken);
     }
 

@@ -38,23 +38,16 @@ partial class AcmeClient
 
         bool authorizationSuccess = false;
 
-        CancellationTokenSource done = new CancellationTokenSource();
-
         var list = new List<string>();
-
-        for(int i = 0; i<10; i++) {
-
-            await Task.Delay(TimeSpan.FromSeconds(5));
-
-            await Task.WhenAll(authorizations.Select((a) =>
+        foreach(var a in authorizations)
+        {
+            foreach(var c in a.Challenges)
             {
-                return Task.WhenAll(a.Challenges.Select(async (c) =>
+                try
                 {
-                    try {
-                        await this.CompleteChallengeAsync(a.Authorization.url, c.KeyAuthorization, done.Token);
-                        authorizationSuccess = true;
-                        done.Cancel();
-                    } catch (Exception ex)
+                    await this.CompleteChallengeAsync(c.url, cancellationToken);
+                    authorizationSuccess = true;
+                }  catch (Exception ex)
                     {
                         // do nothing...
                         if (ex is not TaskCanceledException)
@@ -62,8 +55,14 @@ partial class AcmeClient
                             list.Add(System.Text.Json.JsonSerializer.Serialize(new { error = ex.ToString() }));
                         }
                     }
-                })); 
-            }));
+            }
+        }
+
+        for(int i=0;i<30;i++)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(10));
+
+            await this.RefreshOrder(order.url)
         }
 
         if (!authorizationSuccess)
