@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,24 +15,25 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         // 1. Log the outgoing request
-        Console.WriteLine($"[HTTP Request] {request.Method} {request.RequestUri}");
+        var sb = new StringBuilder();
+        sb.AppendLine($"[HTTP Request] {request.Method} {request.RequestUri}");
 
         foreach(var k in request.Headers)
         {
-            Console.WriteLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
+            sb.AppendLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
         }
 
         if (request.Content != null) {
             foreach(var k in request.Content.Headers)
             {
-                Console.WriteLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
+                sb.AppendLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
             }
 
             if (request.Content is StringContent sc)
             {
                 var ms = new MemoryStream();
                 await sc.CopyToAsync(ms);
-                Console.WriteLine( System.Text.Encoding.UTF8.GetString(ms.ToArray()));
+                sb.AppendLine( System.Text.Encoding.UTF8.GetString(ms.ToArray()));
             }
         }
 
@@ -43,7 +45,9 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
         stopwatch.Stop();
 
         // 3. Log the incoming response
-        Console.WriteLine($"[HTTP Response] {(int)response.StatusCode} {response.StatusCode} ({stopwatch.ElapsedMilliseconds}ms)\n\n");
+        sb.AppendLine($"[HTTP Response] {(int)response.StatusCode} {response.StatusCode} ({stopwatch.ElapsedMilliseconds}ms)\n\n");
+
+        Console.WriteLine(sb.ToString());
 
         return response;
     }

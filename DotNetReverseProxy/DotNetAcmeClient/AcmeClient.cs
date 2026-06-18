@@ -135,7 +135,7 @@ public partial class AcmeClient
 
     public async Task<AcmeAuthorization> GetAuthorizationAsync(string authorizationUrl, CancellationToken cancellationToken = default)
     {
-        var request = await ApiRequest(authorizationUrl, new {  }, cancellationToken, true, false);
+        var request = await ApiRequest(authorizationUrl, (object?)null, cancellationToken, true, false);
 
         var r = (await request.GetResponseAsync<AcmeAuthorization>(_httpClient, cancellationToken))!;
         r.url = authorizationUrl;
