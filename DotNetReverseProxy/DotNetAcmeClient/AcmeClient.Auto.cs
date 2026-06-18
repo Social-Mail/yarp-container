@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
@@ -114,12 +115,13 @@ partial class AcmeClient
         {
             for(int i=0;i<30;i++) {
                 var request = await ApiRequest(url, (object)null, cancellationToken, true, false);
-                var c = await request.GetResponseAsync<AcmeStatus>(_httpClient, cancellationToken);
-                if (Regex.IsMatch("valid|ready", c.Status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
+                var c = await request.GetResponseAsync<System.Text.Json.Nodes.JsonObject>(_httpClient, cancellationToken);
+                var status = (c["status"] as JsonValue).ToString();
+                Console.WriteLine(c.ToJsonString());
+                if (Regex.IsMatch("valid|ready", status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
                 {
                     return;
                 }
-                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(c));
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
 
