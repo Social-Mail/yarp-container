@@ -24,6 +24,7 @@ partial class AcmeClient
     }
 
     public async Task<string> CreateCertificateAsync(
+        string emailAddress,
         RSA domainKey,
         string hostName,
         Func<AcmeChallengeGroup[], CancellationToken,Task<IAsyncDisposable>> applyChallenges,
@@ -31,7 +32,7 @@ partial class AcmeClient
     )
     {
         // this will not save the certificate
-        await this.InitializeAsync("akash@nsmailer.in", cancellationToken);
+        await this.InitializeAsync(emailAddress, cancellationToken);
 
         var hostNames = new[] { hostName };  
 

@@ -32,6 +32,7 @@ public class CertificateInstaller: IMiddleware
     private readonly string acmeEndPoint;
     private readonly string? acmeEAB;
     private readonly string? acmeEABHmac;
+    private readonly string? acmeEmail;
 
     public CertificateInstaller(IMemoryCache cache, JsonLogger logger)
     {
@@ -47,6 +48,7 @@ public class CertificateInstaller: IMiddleware
         this.acmeEndPoint = System.Environment.GetEnvironmentVariable("ACME_END_POINT") ?? "staging";
         this.acmeEAB = System.Environment.GetEnvironmentVariable("ACME_EAB");
         this.acmeEABHmac= System.Environment.GetEnvironmentVariable("ACME_EAB_HMAC");
+        this.acmeEmail = System.Environment.GetEnvironmentVariable("ACME_EMAIL");
 
         switch (this.acmeEndPoint?.ToLower())
         {
@@ -71,7 +73,7 @@ public class CertificateInstaller: IMiddleware
                 : new AcmeClient( httpClient, this.acmeEndPoint, this.accountKeyPath);
 
         using RSA domainKey = RSA.Create(2048);
-        var cert = await client.CreateCertificateAsync(domainKey, serverName, this.SaveChallengesAsync);
+        var cert = await client.CreateCertificateAsync(this.acmeEmail, domainKey, serverName, this.SaveChallengesAsync);
 
         string privateKeyPem = domainKey.ExportRSAPrivateKeyPem();
         return new CertificateInfo
