@@ -15,7 +15,6 @@ public class ReverseHostFinder
 {
     private readonly string Host;
     private readonly Dictionary<string, EndPoint> ports = new ();
-    private readonly Regex wildCardReplacer;
     private readonly EndPoint defaultEndPoint;
     private EndPointHttpClient? forwardClient;
 
@@ -24,8 +23,6 @@ public class ReverseHostFinder
         this.Host = System.Environment.GetEnvironmentVariable("FORWARD_HOST") ?? "0.0.0.0";
         var key = System.Environment.GetEnvironmentVariable("FORWARD_PORT") ?? "8080";
         this.defaultEndPoint = ParseEndPoint(key);
-        string pattern = @"^([^.]*)\.(.*)$";
-        wildCardReplacer = new Regex(pattern, RegexOptions.Compiled);
     }
 
     public ValueTask<EndPoint> GetPort(string hostName)
@@ -42,10 +39,9 @@ public class ReverseHostFinder
             return new ValueTask<EndPoint>(port);
         }
 
-        if (hostName.Contains('.'))
+        var wildcard = WildcardHelper.Replace(hostName);
+        if (wildcard != null)
         {
-            string replacement = "*.$2";
-            string wildcard = this.wildCardReplacer.Replace(hostName, replacement);
             if (this.ports.TryGetValue(wildcard, out port))
             {
                 return new ValueTask<EndPoint>(port);

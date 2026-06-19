@@ -71,16 +71,15 @@ try
         {
             OnConnection = async (c) =>
             {
-                var fwd = await store.GetAsync(c.ClientHelloInfo.ServerName);
-                var ctx = tlsCache.GetOrCreate(fwd.Cert, (ci) =>
+                var cert = await store.GetAsync(c.ClientHelloInfo.ServerName);
+                var ctx = tlsCache.GetOrCreate(cert.Thumbprint, (ci) =>
                 {
-                    var xCert = X509Certificate2.CreateFromPem(fwd.Cert, fwd.Key);
 
                     ci.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
 
                     return new SslServerAuthenticationOptions
                     {
-                        ServerCertificate = xCert,
+                        ServerCertificate = cert,
                         AllowTlsResume = true,
                         ApplicationProtocols = new List<SslApplicationProtocol> {
                             SslApplicationProtocol.Http11,
