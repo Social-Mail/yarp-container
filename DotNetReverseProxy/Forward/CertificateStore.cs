@@ -22,7 +22,6 @@ public class CertificateStore
 {
     private readonly CertificateInstaller installer;
     private readonly JsonLogger logger;
-    private readonly IMemoryCache cache;
     private readonly IPAddress[] SelfIPs;
     private readonly string localStorePath;
     private readonly string? awsZoneSuffix;
@@ -31,7 +30,6 @@ public class CertificateStore
     {
         this.installer = installer;
         this.logger = logger;
-        this.cache = cache;
         this.SelfIPs = (System.Environment.GetEnvironmentVariable("SELF_IPs") ?? "0.0.0.0")
                 .Split(",", StringSplitOptions.RemoveEmptyEntries).Select((x) => IPAddress.Parse(x.Trim()))
                 .ToArray();
@@ -42,28 +40,13 @@ public class CertificateStore
 
     internal async Task<X509Certificate2> GetAsync(string serverName)
     {
-        var key = $"certificate-store-get-{serverName}";
-        try
-        {
-            var r = await cache.GetOrCreate<Task<X509Certificate2>>(key, (c) =>
-            {
-                c.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
-                return _GetAsync(serverName);
-            })!;
-            return r;
-        } catch (Exception ex)
-        {
-            cache.Remove(key);
-            throw ex;
-        }
-    }
-
-    internal async Task<X509Certificate2> _GetAsync(string serverName)
-    {
         if (!await Resolves(serverName))
         {
             throw new InvalidOperationException($"{serverName} does not resolve to this server.");
         }
+
+        // need file lock to prevent multiple installation...
+        using var _lock = await LockFile.LockAsync($"get-or-install-server-certificate-{serverName}");
 
         var cert = await LoadCertFromFile(serverName);
         if (cert != null)
@@ -86,8 +69,6 @@ public class CertificateStore
         try {
 
             // install and save...
-            // need file lock to prevent multiple installation...
-            using var _lock = await LockFile.LockAsync(serverName);
 
             var certFileName = serverName;
             if (this.awsZoneSuffix != null) {
