@@ -14,29 +14,6 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         // 1. Log the outgoing request
-        var sb = new StringBuilder();
-        var firstLine = $"[HTTP Request] {request.Method} {request.RequestUri}";
-        sb.AppendLine(firstLine);
-
-        // foreach(var k in request.Headers)
-        // {
-        //     sb.AppendLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
-        // }
-
-        // if (request.Content != null) {
-        //     foreach(var k in request.Content.Headers)
-        //     {
-        //         sb.AppendLine($"[HTTP Request] {k.Key}: {string.Join("\n\t",k.Value)}");
-        //     }
-
-        //     if (request.Content is StringContent sc)
-        //     {
-        //         var ms = new MemoryStream();
-        //         await sc.CopyToAsync(ms);
-        //         sb.AppendLine( System.Text.Encoding.UTF8.GetString(ms.ToArray()));
-        //     }
-        // }
-
         var stopwatch = Stopwatch.StartNew();
         
         // 2. Pass the request down the pipeline to execute it
@@ -44,16 +21,17 @@ public class SimpleConsoleLoggerHandler : DelegatingHandler
         
         stopwatch.Stop();
 
-        // 3. Log the incoming response
-        sb.AppendLine($"[HTTP Response] {(int)response.StatusCode} {response.StatusCode} ({stopwatch.ElapsedMilliseconds}ms)\n\n");
 
-        // foreach(var k in response.Headers)
-        // {
-        //     sb.AppendLine($"[HTTP Response] {k.Key}: {string.Join("\n\t",k.Value)}");
-        // }
-
-        if(!firstLine.EndsWith("/new-nonce")) {
-            Console.WriteLine(sb.ToString());
+        var url = request.RequestUri!.ToString();
+        if(!url.EndsWith("/new-nonce")) {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                name = "AcmeClient",
+                url,
+                method = request.Method,
+                status = response.StatusCode,
+                duration = $"{stopwatch.ElapsedMilliseconds}ms"
+            }));
         }
 
         return response;
