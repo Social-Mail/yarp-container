@@ -1,6 +1,6 @@
 namespace DotNetReverseProxy;
 
-public struct PortInfo
+public class PortInfo
 {
     public string? UnixPort {get;set;}
 
@@ -8,4 +8,5 @@ public struct PortInfo
 
     public string? Host {get;set;}
 
+    public string? QueryHost { get; set; }
 }

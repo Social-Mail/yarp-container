@@ -23,13 +23,12 @@ partial class AcmeClient
 
     public async Task<AcmeOrder> RefreshOrder(string url, CancellationToken cancellationToken)
     {
-        var request = await ApiRequest(url, (object)null, cancellationToken, true, false);
+        var request = await ApiRequest(url, (object?)null, cancellationToken, true, false);
         return (await request.GetResponseAsync<AcmeOrder>(this._httpClient, cancellationToken))!;
     }
 
     public async Task<string> CreateCertificateAsync(
         RSA domainKey,
-        string domainName,
         string[] hostNames,
         Func<AcmeChallengeGroup[], CancellationToken,Task<IAsyncDisposable>> applyChallenges,
         CancellationToken cancellationToken = default
@@ -102,18 +101,18 @@ partial class AcmeClient
 
         var result = await WaitForValidChallengeAsync(order.url, cancellationToken);
 
-        var certificate = (result["certificate"] as JsonValue).ToString();
+        var certificate = (result!["certificate"] as JsonValue)!.ToString();
 
         var cert = await this.DownloadCertificateAsync(certificate, cancellationToken);
 
         return cert;
 
-        async Task<System.Text.Json.Nodes.JsonObject> WaitForValidChallengeAsync(string url, CancellationToken cancellationToken)
+        async Task<System.Text.Json.Nodes.JsonObject?> WaitForValidChallengeAsync(string url, CancellationToken cancellationToken)
         {
             for(int i=0;i<30;i++) {
-                var request = await ApiRequest(url, (object)null, cancellationToken, true, false);
+                var request = await ApiRequest(url, (object?)null, cancellationToken, true, false);
                 var c = await request.GetResponseAsync<System.Text.Json.Nodes.JsonObject>(_httpClient, cancellationToken);
-                var status = (c["status"] as JsonValue).ToString();
+                var status = (c["status"] as JsonValue)!.ToString();
                 Console.WriteLine(c.ToJsonString());
                 if (Regex.IsMatch("valid|ready", status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
                 {
@@ -139,7 +138,7 @@ partial class AcmeClient
                     var k = c.Type;
                     if(!pairs.TryGetValue(k, out var g))
                     {
-                        g = new AcmeChallengeGroup(domainName, k, auth);
+                        g = new AcmeChallengeGroup(auth.Identifier.Value, k, auth);
                         pairs.Add(k, g);
                     }
 

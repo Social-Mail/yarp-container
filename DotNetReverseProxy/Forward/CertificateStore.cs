@@ -22,13 +22,8 @@ public class CertificateStore: IMiddleware
 {
     private readonly IMemoryCache cache;
     private readonly HttpClient httpClient;
-    private readonly string? forwardPort;
-    private readonly string Host;
     private readonly string accountKeyPath;
     private readonly string? awsAccessKey;
-    private readonly string? UnixPort;
-    private readonly int Port;
-    private readonly string? ForwardDnsEndPoint;
     private readonly string? awsAccessKeySecret;
     private readonly string? awsZoneID;
     private readonly string? awsZoneSuffix;
@@ -39,8 +34,6 @@ public class CertificateStore: IMiddleware
     {
         this.cache = cache;
         this.httpClient = new HttpClient(new SimpleConsoleLoggerHandler( new HttpClientHandler() ));
-        this.forwardPort = System.Environment.GetEnvironmentVariable("FORWARD_PORT");
-        this.Host = System.Environment.GetEnvironmentVariable("FORWARD_HOST")!;
         this.storagePath = System.Environment.GetEnvironmentVariable("FORWARD_CERT_STORE") ?? "/cache/certs/";
         FileEx.EnsureDirectory(this.storagePath);
         this.accountKeyPath = System.IO.Path.Join(this.storagePath, "account.key");
@@ -53,39 +46,16 @@ public class CertificateStore: IMiddleware
         {
             this.awsZoneSuffix = "." + this.awsZoneSuffix;
         }
-
-        if(!int.TryParse(forwardPort ?? "none", out int Port))
-        {
-            this.UnixPort = forwardPort;
-        }
-        this.Port = Port;
-        this.ForwardDnsEndPoint = System.Environment.GetEnvironmentVariable("FORWARD_DNS_ENDPOINT");
-    }
-
-    public async Task<PortInfo> GetPort(string hostName)
-    {
-        return new PortInfo
-        {
-            Host = Host,
-            Port = Port,
-            UnixPort = UnixPort
-        };
     }
 
     internal async Task<CertificateInfo> GetCertificate(string serverName)
     {
-        var apex = await this.GetApexDomain(serverName);
-
         var client = new AcmeClient( httpClient, AcmeUrls.letsEncrypt.staging, this.accountKeyPath);
 
         var names = new [] { serverName };
-        if (serverName.StartsWith("*"))
-        {
-            names = new [] { apex.domain, serverName };
-        }
 
         using RSA domainKey = RSA.Create(2048);
-        var cert = await client.CreateCertificateAsync(domainKey, apex.domain, names, this.SaveChallengesAsync);
+        var cert = await client.CreateCertificateAsync(domainKey, names, this.SaveChallengesAsync);
 
         string privateKeyPem = domainKey.ExportRSAPrivateKeyPem();
         return new CertificateInfo
@@ -193,28 +163,28 @@ public class CertificateStore: IMiddleware
         
     }
 
-    Task<(string subDomain, string domain)> GetApexDomain(string serverName)
-    {
-        return cache.GetOrCreateAsync<(string, string)>($"GetApexDomain:{serverName}", async (c) =>
-        {
-            var ruleProvider = new SimpleHttpRuleProvider();
-            await ruleProvider.BuildAsync(); // Vital step to populate domain rules
+    //Task<(string subDomain, string domain)> GetApexDomain(string serverName)
+    //{
+    //    return cache.GetOrCreateAsync<(string, string)>($"GetApexDomain:{serverName}", async (c) =>
+    //    {
+    //        var ruleProvider = new SimpleHttpRuleProvider();
+    //        await ruleProvider.BuildAsync(); // Vital step to populate domain rules
 
-            // 2. Initialize the domain parser
-            var domainParser = new DomainParser(ruleProvider);
+    //        // 2. Initialize the domain parser
+    //        var domainParser = new DomainParser(ruleProvider);
 
-            var tmpName = serverName;
-            if (serverName.StartsWith("*."))
-            {
-                tmpName = serverName.Replace("*.", "w.");
-            }
+    //        var tmpName = serverName;
+    //        if (serverName.StartsWith("*."))
+    //        {
+    //            tmpName = serverName.Replace("*.", "w.");
+    //        }
 
-            domainParser.TryParse(tmpName, out var result);
+    //        domainParser.TryParse(tmpName, out var result);
 
-            c.SlidingExpiration = TimeSpan.FromMinutes(15);
-            return (serverName.Substring(0, serverName.Length - result!.RegistrableDomain!.Length),result.RegistrableDomain);
-        });
-    }
+    //        c.SlidingExpiration = TimeSpan.FromMinutes(15);
+    //        return (serverName.Substring(0, serverName.Length - result!.RegistrableDomain!.Length),result.RegistrableDomain);
+    //    });
+    //}
 
     public Task InvokeAsync(HttpContext context, RequestDelegate next)
     {

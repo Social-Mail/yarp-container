@@ -44,7 +44,9 @@ try
 
     var weakTable = new ConditionalWeakTable<object, UnixDomainSocketEndPoint>();
 
-    MemoryCache cache = new MemoryCache(new MemoryCacheOptions { });
+    // this cache is for TLS resumption
+    // this is not certificate store
+    MemoryCache tlsCache = new MemoryCache(new MemoryCacheOptions { });
 
     var builder = WebApplication.CreateBuilder(args);
 
@@ -69,7 +71,7 @@ try
             OnConnection = async (c) =>
             {
                 var fwd = await store.GetCertificate(c.ClientHelloInfo.ServerName);
-                var ctx = cache.GetOrCreate(fwd.Cert, (ci) =>
+                var ctx = tlsCache.GetOrCreate(fwd.Cert, (ci) =>
                 {
                     var xCert = X509Certificate2.CreateFromPem(fwd.Cert, fwd.Key);
 
@@ -109,6 +111,7 @@ try
     builder.Services.AddHttpForwarder();
     builder.Services.AddSingleton<CertificateStore>();
     builder.Services.AddSingleton<Forwarder>();
+    builder.Services.AddSingleton<ReverseHostFinder>();
     builder.Services.AddResponseCompression((options) =>
     {
         options.EnableForHttps = true;
@@ -123,80 +126,17 @@ try
 
     var app = builder.Build();
 
-    // Setup our own request transform class
-    var requestOptions = new ForwarderRequestConfig { ActivityTimeout = TimeSpan.FromSeconds(100) };
-    // app.UseHsts();
-
     // we need to use this as soon as possible...
     app.UseMiddleware<CertificateStore>();
 
     app.UseResponseCompression();
     app.UseRouting();
     app.UseSocialMailRateLimiter();
+
+    var rhf = app.Services.GetRequiredService<ReverseHostFinder>();
+    await rhf.InitAsync();
+
     app.UseMiddleware<Forwarder>();
-
-    // // When using IHttpForwarder for direct forwarding you are responsible for routing, destination discovery, load balancing, affinity, etc..
-    // // For an alternate example that includes those features see BasicYarpSample.
-    // app.Map("/{**catch-all}", async (HttpContext httpContext, IHttpForwarder forwarder) =>
-    // {
-
-    //     var start = DateTime.UtcNow;
-    //     var forwarder = httpContext.RequestServices.GetRequiredService<Forwarder>();
-
-    //     var error = await forwarder.SendAsync(httpContext, "http://" + httpContext.Request.Headers.Host, httpClient, requestOptions,
-    //         (context, proxyRequest) =>
-    //         {
-    //             var responseHeaders = context.Response.Headers;
-    //             responseHeaders.TryAdd("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-    //             responseHeaders.TryAdd("X-Content-Type-Options", "nosniff");
-    //             responseHeaders.TryAdd("X-Frame-Options", "SAMEORIGIN");
-    //             responseHeaders.TryAdd("Referrer-Policy", "same-origin");
-
-    //             // Customize the query string:
-    //             var queryContext = new QueryTransformContext(context.Request);
-    //             var ip = context.Connection.RemoteIpAddress;
-    //             if (ip != null)
-    //             {
-    //                 proxyRequest.Headers.TryAddWithoutValidation("x-forwarded-for", ip.ToString());
-    //             }
-
-    //             // Assign the custom uri. Be careful about extra slashes when concatenating here. RequestUtilities.MakeDestinationAddress is a safe default.
-    //             proxyRequest.RequestUri = RequestUtilities.MakeDestinationAddress("http://" + proxyRequest.Headers.Host, context.Request.Path, queryContext.QueryString);
-    //             proxyRequest.Version = HttpVersion.Version11;
-    //             return default;
-    //         });
-
-
-    //     Exception? exception = null;
-
-    //     // Check if the proxy operation was successful
-    //     if (error != ForwarderError.None)
-    //     {
-    //         var errorFeature = httpContext.Features.Get<IForwarderErrorFeature>();
-    //         if (errorFeature != null)
-    //         {
-    //             exception = errorFeature.Exception;
-    //             if (exception != null)
-    //             {
-    //                 Console.WriteLine(exception.ToString());
-    //             }
-    //         }
-    //     }
-
-    //     httpContext.RegisterStatus(DateTime.UtcNow - start, exception);
-
-    // });
-
-    var store = app.Services.GetRequiredService<CertificateStore>();
-    await store.GetCertificate("*.nsmailer.in");
-
-    app.Run();
-
-
-
-    // try
-
-
 
 }
 catch (Exception ex)

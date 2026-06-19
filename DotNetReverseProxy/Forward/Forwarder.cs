@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
@@ -14,16 +16,16 @@ namespace DotNetReverseProxy;
 
 public class Forwarder: IMiddleware
 {
-    private readonly CertificateStore store;
     private readonly IHttpForwarder forwarder;
     private readonly ForwarderRequestConfig requestOptions;
     private readonly HttpMessageInvoker client;
+    private readonly ReverseHostFinder hostFinder;
 
-    public Forwarder(CertificateStore store, IHttpForwarder forwarder)
+    public Forwarder(CertificateStore store, IHttpForwarder forwarder, ReverseHostFinder hostFinder)
     {
-        this.store = store;
         this.forwarder = forwarder;
         this.requestOptions = new ForwarderRequestConfig { ActivityTimeout = TimeSpan.FromSeconds(100) };
+        this.hostFinder = hostFinder;
         this.client = new HttpMessageInvoker(new SocketsHttpHandler
         {
             UseProxy = false,
@@ -32,33 +34,38 @@ public class Forwarder: IMiddleware
             UseCookies = false,
             ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
             ConnectTimeout = TimeSpan.FromSeconds(15),
-            ConnectCallback = async (context, cancellationToken) =>
-            {
-                Socket? socket = null;
-                try
-                {
-                    var host = context.InitialRequestMessage.Headers.Host;
-                    var portAddress = await store.GetPort(host ?? "localhost");
-                    if (portAddress.UnixPort != null) {
-                        socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-                        var port = new UnixDomainSocketEndPoint(portAddress.UnixPort);
-                        await socket.ConnectAsync(port, cancellationToken).ConfigureAwait(false);
-                    } else
-                    {
-                        socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                        var port = new DnsEndPoint(portAddress.Host ?? "localhost", portAddress.Port);
-                        await socket.ConnectAsync(port, cancellationToken).ConfigureAwait(false);
-                    }
-                    return new NetworkStream(socket, true);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"{ex}");
-                    socket?.Dispose();
-                    throw;
-                }
-            }
+            ConnectCallback = SocketConnectCallback
         });
+    }
+
+    private async ValueTask<Stream> SocketConnectCallback (SocketsHttpConnectionContext context, CancellationToken cancellationToken)
+    {
+        Socket? socket = null;
+        try
+        {
+            var host = context.InitialRequestMessage.Headers.Host;
+            var portAddress = await hostFinder.GetPort(host ?? "localhost");
+            if (portAddress is UnixDomainSocketEndPoint unixPort)
+            {
+                socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+                await socket.ConnectAsync(unixPort, cancellationToken).ConfigureAwait(false);
+            }
+            else if (portAddress is DnsEndPoint dnsEndPoint)
+            {
+                socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+                await socket.ConnectAsync(dnsEndPoint, cancellationToken).ConfigureAwait(false);
+            } else
+            {
+                throw new InvalidOperationException($"Unknown portAddress {portAddress}");
+            }
+            return new NetworkStream(socket, true);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"{ex}");
+            socket?.Dispose();
+            throw;
+        }
     }
 
     public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
