@@ -135,13 +135,18 @@ public class CertificateStore
         var host = await ClientX.QueryDns(cnameFrom, DnsRecordType.CNAME, DnsEndpoint.GoogleQuic);
         if (host == null)
         {
-            Console.WriteLine($"No Dns Forward {cnameFrom} -> {cnameTo}");
+            Console.WriteLine($"No Dns Entry {cnameFrom} -> {cnameTo}");
             return false;
         }
         var r = host.Answers.Any((a) => a.Data == cnameTo);
         if (!r)
         {
-            Console.WriteLine($"No Dns Forward {cnameFrom} -> {cnameTo}");
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new {
+                error= "no match",
+                result = host,
+                from = cnameFrom,
+                to = cnameTo
+            }));
         }
         return r;
     }
