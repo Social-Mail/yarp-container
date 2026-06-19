@@ -21,7 +21,7 @@ public class Forwarder: IMiddleware
     private readonly HttpMessageInvoker client;
     private readonly ReverseHostFinder hostFinder;
 
-    public Forwarder(CertificateStore store, IHttpForwarder forwarder, ReverseHostFinder hostFinder)
+    public Forwarder(CertificateInstaller store, IHttpForwarder forwarder, ReverseHostFinder hostFinder)
     {
         this.forwarder = forwarder;
         this.requestOptions = new ForwarderRequestConfig { ActivityTimeout = TimeSpan.FromSeconds(100) };

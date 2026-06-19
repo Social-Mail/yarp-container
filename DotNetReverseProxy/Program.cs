@@ -1,4 +1,5 @@
 ﻿using DotNetReverseProxy;
+using DotNetReverseProxy.Forward;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
@@ -70,7 +71,7 @@ try
         {
             OnConnection = async (c) =>
             {
-                var fwd = await store.GetCertificate(c.ClientHelloInfo.ServerName);
+                var fwd = await store.GetAsync(c.ClientHelloInfo.ServerName);
                 var ctx = tlsCache.GetOrCreate(fwd.Cert, (ci) =>
                 {
                     var xCert = X509Certificate2.CreateFromPem(fwd.Cert, fwd.Key);
@@ -110,6 +111,7 @@ try
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
     builder.Services.AddSingleton<CertificateStore>();
+    builder.Services.AddSingleton<CertificateInstaller>();
     builder.Services.AddSingleton<Forwarder>();
     builder.Services.AddSingleton<ReverseHostFinder>();
     builder.Services.AddResponseCompression((options) =>
@@ -127,7 +129,7 @@ try
     var app = builder.Build();
 
     // we need to use this as soon as possible...
-    app.UseMiddleware<CertificateStore>();
+    app.UseMiddleware<CertificateInstaller>();
 
     app.UseResponseCompression();
     app.UseRouting();
