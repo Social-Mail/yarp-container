@@ -166,7 +166,7 @@ public partial class AcmeClient
 
     public async Task<string> DownloadCertificateAsync(string certificateUrl, CancellationToken cancellationToken = default)
     {
-        var request = await ApiRequest(certificateUrl, new {  }, cancellationToken, true, false);
+        var request = await ApiRequest(certificateUrl, (object?)null, cancellationToken, true, false);
         var response = (await request.GetResponseAsync<AcmeCertificate>(_httpClient, cancellationToken))!;
         return response.Certificate;
     }
