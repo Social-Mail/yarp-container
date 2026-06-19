@@ -141,17 +141,17 @@ partial class AcmeClient
                     }
 
                     c.KeyAuthorization = $"{c.Token}.{keysum}";
-                    if (c.Type == "dns-01")
+                    if (hasWildcard)
                     {
-                        if (hasWildcard)
+                        if (c.Type.StartsWith("dns", StringComparison.OrdinalIgnoreCase))
                         {
                             c.KeyAuthorization = Signer.SHA256Base64Url(c.KeyAuthorization);
                             g.Challenges.Add(c);
-                            continue;
                         }
                         continue;
                     }
-                    if(hasWildcard) {
+                    if (c.Type.StartsWith("dns", StringComparison.OrdinalIgnoreCase))
+                    {
                         continue;
                     }
                     g.Challenges.Add(c);
