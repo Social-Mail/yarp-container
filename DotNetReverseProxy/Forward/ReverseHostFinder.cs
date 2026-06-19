@@ -89,11 +89,6 @@ public class ReverseHostFinder
         IDisposable? disposable = null;
         try {
             var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            logger.Log(new
-            {
-                to = endPoint.ToString(),
-                name = "SocketFactory"
-            });
             disposable = socket;
             await socket.ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
             disposable = null;
@@ -120,10 +115,8 @@ public class ReverseHostFinder
             return new UnixDomainSocketEndPoint(endPoint);
         }
 
-        string? host = null;
-
         int port = 0;
-        host = this.Host;
+        string host = this.Host;
         var tokens = endPoint.Split(":");
         if (tokens.Length > 1)
         {
@@ -132,13 +125,13 @@ public class ReverseHostFinder
         }
         if (Int32.TryParse(endPoint, out var port1))
         {
-            port1 = port;
+            port = port1;
         }
         else
         {
             port = 80;
         }
-        return new DnsEndPoint(host, port1);
+        return new DnsEndPoint(host, port);
     }
 
     internal async Task InitAsync()
