@@ -13,6 +13,7 @@ COPY . .
 RUN dotnet publish ./DotNetReverseProxy/DotNetReverseProxy.csproj -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
+LABEL org.opencontainers.image.source https://github.com/social-mail/yarp-container
 WORKDIR /app
 RUN apk add --no-cache libmsquic
 COPY --from=build /app/publish .
