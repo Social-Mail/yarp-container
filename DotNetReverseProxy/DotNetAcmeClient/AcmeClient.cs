@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Net.Http.Headers;
 using RetroCoreFit;
 using DotNetAcmeClient.Models;
+using System.Linq;
 
 namespace DotNetAcmeClient;
 
@@ -164,11 +165,16 @@ public partial class AcmeClient
         return (await request.GetResponseAsync<AcmeOrder>(_httpClient, cancellationToken))!;
     }
 
-    public async Task<string> DownloadCertificateAsync(string certificateUrl, CancellationToken cancellationToken = default)
+    public async Task<(string Certificate, string[]? Links)> DownloadCertificateAsync(string certificateUrl, CancellationToken cancellationToken = default)
     {
         var request = await ApiRequest(certificateUrl, (object?)null, cancellationToken, true, false);
-        var response = (await request.GetResponseAsync<AcmeCertificate>(_httpClient, cancellationToken))!;
-        return response.Certificate;
+        var response = (await request.GetResponseAsync(_httpClient, cancellationToken))!;
+        string[]? links = null;
+        if (response.Headers.TryGetValues("link", out var linkValues)) {
+            links = linkValues.ToArray();
+        }
+
+        return (await response.Content.ReadAsStringAsync(), links);
     }
 
     public RSA GetAccountKey()

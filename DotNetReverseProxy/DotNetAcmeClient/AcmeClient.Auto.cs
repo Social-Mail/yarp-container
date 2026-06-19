@@ -114,7 +114,7 @@ partial class AcmeClient
 
         var cert = await this.DownloadCertificateAsync(certificate, cancellationToken);
 
-        return cert;
+        return cert.Certificate;
 
         async Task<System.Text.Json.Nodes.JsonObject?> WaitForValidChallengeAsync(
             string url,
