@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
@@ -20,13 +21,15 @@ class CertInfo
 public class CertificateStore
 {
     private readonly CertificateInstaller installer;
+    private readonly JsonLogger logger;
     private readonly IPAddress[] SelfIPs;
     private readonly string localStorePath;
     private readonly string? awsZoneSuffix;
 
-    public CertificateStore(CertificateInstaller installer)
+    public CertificateStore(CertificateInstaller installer, JsonLogger logger)
     {
         this.installer = installer;
+        this.logger = logger;
         this.SelfIPs = (System.Environment.GetEnvironmentVariable("SELF_IPs") ?? "0.0.0.0")
                 .Split(",", StringSplitOptions.RemoveEmptyEntries).Select((x) => IPAddress.Parse(x.Trim()))
                 .ToArray();
@@ -58,23 +61,35 @@ public class CertificateStore
             }
         }
 
-        // install and save...
-        // need file lock to prevent multiple installation...
-        using var _lock = await LockFile.LockAsync(serverName);
+        var originalName = serverName;
 
-        var certFileName = serverName;
-        if (this.awsZoneSuffix != null) {
-            if (await HasDnsForward(serverName))
-            {
+        try {
 
-                certFileName = WildcardHelper.ReplaceAsFileName(serverName)!;
-                serverName = WildcardHelper.Replace(serverName);
+            // install and save...
+            // need file lock to prevent multiple installation...
+            using var _lock = await LockFile.LockAsync(serverName);
+
+            var certFileName = serverName;
+            if (this.awsZoneSuffix != null) {
+                if (await HasDnsForward(serverName))
+                {
+
+                    certFileName = WildcardHelper.ReplaceAsFileName(serverName)!;
+                    serverName = WildcardHelper.Replace(serverName);
+                }
             }
-        }
 
-        var installed = await installer.InstallCertificateAsync(serverName);
-        await SaveCertToFile(certFileName, installed);
-        return X509Certificate2.CreateFromPem(installed.Cert, installed.Key);
+            var installed = await installer.InstallCertificateAsync(serverName);
+            await SaveCertToFile(certFileName, installed);
+            return X509Certificate2.CreateFromPem(installed.Cert, installed.Key);
+        } catch (Exception ex)
+        {
+            logger.LogError(new {
+                error = ex.ToString(),
+                host = serverName
+            });
+            return Create24HourCertificate(originalName);
+        }
     }
 
     private async Task<bool> HasDnsForward(string serverName)
@@ -137,5 +152,42 @@ public class CertificateStore
             }
         }
         return false;
+    }
+
+    public static X509Certificate2 Create24HourCertificate(string subjectName)
+    {
+        // 1. Generate RSA key pair (2048-bit is standard)
+        using (RSA rsa = RSA.Create(2048))
+        {
+            // 2. Define the distinguished name (Subject and Issuer will be identical)
+            var x500DistinguishedName = new X500DistinguishedName($"CN={subjectName}");
+
+            // 3. Create the Certificate Request
+            var request = new CertificateRequest(
+                x500DistinguishedName, 
+                rsa, 
+                HashAlgorithmName.SHA256, 
+                RSASignaturePadding.Pkcs1
+            );
+
+            // 4. Add standard Extensions (e.g., Basic Constraints, Key Usage)
+            request.CertificateExtensions.Add(
+                new X509BasicConstraintsExtension(false, false, 0, false)
+            );
+
+            request.CertificateExtensions.Add(
+                new X509KeyUsageExtension(
+                    X509KeyUsageFlags.DigitalSignature | X509KeyUsageFlags.KeyEncipherment, 
+                    false
+                )
+            );
+
+            // 5. Define validity period: Start now, expire in exactly 24 hours
+            DateTimeOffset notBefore = DateTimeOffset.UtcNow;
+            DateTimeOffset notAfter = notBefore.AddHours(24);
+
+            // 6. Create the self-signed certificate
+            return request.CreateSelfSigned(notBefore, notAfter);
+        }
     }
 }
