@@ -3,9 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Http;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DotNetReverseProxy;
@@ -13,18 +15,18 @@ namespace DotNetReverseProxy;
 public class ReverseHostFinder
 {
     private readonly string Host;
-    private readonly Dictionary<string, EndPoint> ports = new ();
-    private readonly EndPoint defaultEndPoint;
+    private readonly Dictionary<string, Func<CancellationToken,ValueTask<Stream>>> ports = new ();
+    private readonly Func<CancellationToken,ValueTask<Stream>> defaultEndPoint;
     private EndPointHttpClient? forwardClient;
 
     public ReverseHostFinder()
     {
         this.Host = System.Environment.GetEnvironmentVariable("FORWARD_HOST") ?? "0.0.0.0";
         var key = System.Environment.GetEnvironmentVariable("FORWARD_PORT") ?? "8080";
-        this.defaultEndPoint = ParseEndPoint(key);
+        this.defaultEndPoint = Factory(ParseEndPoint(key));
     }
 
-    public ValueTask<EndPoint> GetPort(string hostName)
+    public Func<CancellationToken,ValueTask<Stream>> GetPort(string hostName)
     {
         // for the case when cluster might support multiple virtual servers
         // this can query host
@@ -35,7 +37,7 @@ public class ReverseHostFinder
 
         if(this.ports.TryGetValue(hostName, out var port))
         {
-            return new ValueTask<EndPoint>(port);
+            return port;
         }
 
         var wildcard = WildcardHelper.Replace(hostName);
@@ -43,23 +45,64 @@ public class ReverseHostFinder
         {
             if (this.ports.TryGetValue(wildcard, out port))
             {
-                return new ValueTask<EndPoint>(port);
+                return port;
             }
         }
 
         // check forward port...
         if (forwardClient != null)
         {
-            return ResolvePortAsync(hostName);
+            return (c) => ResolvePortAsync(hostName, c);
         }
 
-        return new ValueTask<EndPoint>(this.defaultEndPoint);
+        return this.defaultEndPoint;
     }
 
-    private async ValueTask<EndPoint> ResolvePortAsync(string hostName)
+    private Func<CancellationToken,ValueTask<Stream>> Factory(EndPoint endPoint)
+    {
+        if (endPoint is UnixDomainSocketEndPoint unixPath)
+        {
+            return (c) => UnixSocketFactory(unixPath, c);
+        }
+        return (c) => SocketFactory((endPoint as DnsEndPoint)!, c);
+    }
+
+    private async ValueTask<Stream> UnixSocketFactory(UnixDomainSocketEndPoint unixPort, CancellationToken cancellationToken)
+    {
+        IDisposable? disposable = null;
+        try {
+            var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
+            disposable = socket;
+            await socket.ConnectAsync(unixPort, cancellationToken).ConfigureAwait(false);
+            disposable = null;
+            return new NetworkStream(socket, true);
+        } finally
+        {
+            disposable?.Dispose();
+        }
+    }
+
+    private async ValueTask<Stream> SocketFactory(DnsEndPoint endPoint, CancellationToken cancellationToken)
+    {
+        IDisposable? disposable = null;
+        try {
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            disposable = socket;
+            await socket.ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
+            disposable = null;
+            return new NetworkStream(socket, true);
+        } finally
+        {
+            disposable?.Dispose();
+        }
+    }
+
+    private async ValueTask<Stream> ResolvePortAsync(string hostName, CancellationToken ct)
     {
         var r = await this.forwardClient!.GetStringAsync("http://somewhere/fwd/" + hostName);
-        return ParseEndPoint(r);
+        var endPoint = ParseEndPoint(r);
+        var factory = Factory(endPoint);
+        return await factory(ct);
     }
 
     private EndPoint ParseEndPoint(string endPoint)
@@ -125,7 +168,7 @@ public class ReverseHostFinder
                 foreach(var item in array)
                 {
                     var hostName = item.GetValue<string>().ToLower();
-                    ports[hostName] = endPoint;
+                    ports[hostName] = Factory(endPoint);
                 }
                 continue;
             }
@@ -140,5 +183,12 @@ public class ReverseHostFinder
         }
 
         this.forwardClient = new EndPointHttpClient(forwardEndPoint);
+    }
+
+    internal ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, CancellationToken token)
+    {
+        var host = context.InitialRequestMessage.Headers.Host ?? "localhost";
+        var factory = GetPort(host);
+        return factory(token);
     }
 }

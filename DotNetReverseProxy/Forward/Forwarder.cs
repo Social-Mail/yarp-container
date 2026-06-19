@@ -47,39 +47,11 @@ public class Forwarder: IMiddleware
             UseCookies = false,
             ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
             ConnectTimeout = TimeSpan.FromSeconds(15),
-            ConnectCallback = SocketConnectCallback
+            ConnectCallback = hostFinder.ConnectAsync
         });
     }
 
-    private async ValueTask<Stream> SocketConnectCallback (SocketsHttpConnectionContext context, CancellationToken cancellationToken)
-    {
-        Socket? socket = null;
-        try
-        {
-            var host = context.InitialRequestMessage.Headers.Host;
-            var portAddress = await hostFinder.GetPort(host ?? "localhost");
-            if (portAddress is UnixDomainSocketEndPoint unixPort)
-            {
-                socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
-                await socket.ConnectAsync(unixPort, cancellationToken).ConfigureAwait(false);
-            }
-            else if (portAddress is DnsEndPoint dnsEndPoint)
-            {
-                socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-                await socket.ConnectAsync(dnsEndPoint, cancellationToken).ConfigureAwait(false);
-            } else
-            {
-                throw new InvalidOperationException($"Unknown portAddress {portAddress}");
-            }
-            return new NetworkStream(socket, true);
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"{ex}");
-            socket?.Dispose();
-            throw;
-        }
-    }
+
 
     public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
     {
