@@ -52,10 +52,8 @@ public class CertificateStore: IMiddleware
     {
         var client = new AcmeClient( httpClient, AcmeUrls.letsEncrypt.staging, this.accountKeyPath);
 
-        var names = new [] { serverName };
-
         using RSA domainKey = RSA.Create(2048);
-        var cert = await client.CreateCertificateAsync(domainKey, names, this.SaveChallengesAsync);
+        var cert = await client.CreateCertificateAsync(domainKey, serverName, this.SaveChallengesAsync);
 
         string privateKeyPem = domainKey.ExportRSAPrivateKeyPem();
         return new CertificateInfo

@@ -29,7 +29,7 @@ partial class AcmeClient
 
     public async Task<string> CreateCertificateAsync(
         RSA domainKey,
-        string[] hostNames,
+        string hostName,
         Func<AcmeChallengeGroup[], CancellationToken,Task<IAsyncDisposable>> applyChallenges,
         CancellationToken cancellationToken = default
     )
@@ -37,9 +37,11 @@ partial class AcmeClient
         // this will not save the certificate
         await this.InitializeAsync("akash@nsmailer.in", cancellationToken);
 
+        var hostNames = new[] { hostName };  
+
         var order = await this.CreateOrderAsync(hostNames, cancellationToken);
 
-        var hasWildcard = hostNames.Any((h) => h.StartsWith("*."));
+        var hasWildcard = hostName.StartsWith("*.");
 
         var authorizations = await GetAuthorizationChallengesAsync(hasWildcard, order, cancellationToken);
 
