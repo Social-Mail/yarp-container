@@ -194,8 +194,7 @@ public class CertificateInstaller: IMiddleware
         var request = context.Request;
         var response = context.Response;
         var tokens = request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        logger.Log(new { tokens });
-        var file = tokens[2];
+        var file = tokens[0];
         var challengePath = GetChallengePath(file);
         if (!System.IO.File.Exists(challengePath))
         {
