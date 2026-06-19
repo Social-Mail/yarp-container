@@ -26,9 +26,12 @@ public class CertificateStore
     private readonly string localStorePath;
     private readonly string? awsZoneSuffix;
 
+    private readonly IMemoryCache cache;
+
     public CertificateStore(CertificateInstaller installer, JsonLogger logger, IMemoryCache cache)
     {
         this.installer = installer;
+        this.cache = cache;
         this.logger = logger;
         this.SelfIPs = (System.Environment.GetEnvironmentVariable("SELF_IPs") ?? "0.0.0.0")
                 .Split(",", StringSplitOptions.RemoveEmptyEntries).Select((x) => IPAddress.Parse(x.Trim()))
@@ -38,7 +41,19 @@ public class CertificateStore
         FileEx.EnsureDirectory(this.localStorePath);
     }
 
-    internal async Task<X509Certificate2> GetAsync(string serverName)
+
+    internal Task<X509Certificate2> GetAsync(string serverName)
+    {
+        serverName = serverName.ToLower();
+        /// It is important to cache this for 15 minutes
+        /// So even in case of DDOS, we are not going to forward it further
+        return cache.GetOrCreate($"certificate-store-{serverName}", (c) =>
+        {
+            c.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
+            return _GetAsync(serverName);
+        })!;
+    }
+    internal async Task<X509Certificate2> _GetAsync(string serverName)
     {
         if (!await Resolves(serverName))
         {
