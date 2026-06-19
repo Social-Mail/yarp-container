@@ -1,4 +1,5 @@
-﻿using System.Text.RegularExpressions;
+﻿using System;
+using System.Text.RegularExpressions;
 
 namespace DotNetReverseProxy.Forward;
 
@@ -32,4 +33,13 @@ public class WildcardHelper
         return wildCardReplacer.Replace(hostName, replacement);
     }
 
+    internal static string? GetTopLevel(string hostName)
+    {
+        if(!hostName.Contains("."))
+        {
+            return null;
+        }
+        string replacement = "$2";
+        return wildCardReplacer.Replace(hostName, replacement);
+    }
 }

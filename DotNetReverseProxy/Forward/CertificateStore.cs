@@ -123,10 +123,13 @@ public class CertificateStore
 
     private async Task<bool> HasDnsForward(string serverName)
     {
-        var cnameFrom = $"_acme-challenge." + serverName;
-        var cnameTo = $"{serverName}{this.awsZoneSuffix}";
 
-        Console.WriteLine($"Has Dns Forward {cnameFrom} -> {cnameTo} ?");
+        // we need to go up...
+        var root = WildcardHelper.GetTopLevel(serverName);
+
+        var cnameFrom = $"_acme-challenge." + root;
+        var cnameTo = $"{root}{this.awsZoneSuffix}";
+
 
         // check CNAME for wildcard...
         var host = await ClientX.QueryDns(cnameFrom, DnsRecordType.CNAME, DnsEndpoint.GoogleQuic);
