@@ -16,6 +16,7 @@ using System.Net.Quic;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 
 try
 {
@@ -100,7 +101,6 @@ try
     builder.Services.AddSingleton<JsonLogger>();
     builder.Services.AddSingleton<CertificateStore>();
     builder.Services.AddSingleton<CertificateInstaller>();
-    builder.Services.AddSingleton<Forwarder>();
     builder.Services.AddSingleton<ReverseHostFinder>();
     builder.Services.AddResponseCompression((options) =>
     {
@@ -113,6 +113,7 @@ try
     });
 
     builder.Services.AddSocialMailRateLimiter();
+    builder.Services.AddSingleton<Forwarder>();
 
     var app = builder.Build();
 
@@ -132,5 +133,8 @@ try
 catch (Exception ex)
 {
     Console.WriteLine(ex);
+
+    await Task.Delay(TimeSpan.FromMinutes(1));
+
     throw new Exception("Closed", ex);
 }
