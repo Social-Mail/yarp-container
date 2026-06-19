@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -21,6 +22,12 @@ partial class AcmeClient
     {
         var request = await ApiRequest(url, (object?)null, cancellationToken, true, false);
         return (await request.GetResponseAsync<AcmeOrder>(this._httpClient, cancellationToken))!;
+    }
+
+    private void Log<T>(T item)
+    {
+        var log = System.Text.Json.JsonSerializer.Serialize(item);
+        Console.WriteLine(log);
     }
 
     public async Task<string> CreateCertificateAsync(
@@ -50,66 +57,57 @@ partial class AcmeClient
 
         var doneToken = done.Token;
 
-        var list = new List<string>();
+        var list = new ConcurrentBag<object?>();
         await Task.WhenAll(authorizations.Select(async (a) =>
         {
             await Task.WhenAll(a.Challenges.Select(async (c) =>
             {
-            try
-            {
-                await this.CompleteChallengeAsync(c.url, doneToken);
-
-                if (doneToken.IsCancellationRequested)
+                try
                 {
-                    return;
-                }
+                    await this.CompleteChallengeAsync(c.url, doneToken);
 
-                await WaitForValidChallengeAsync(c.url, cancellationToken, () => {
-                    authorizationSuccess = true;
-                    done.Cancel();
-                });
+                    if (doneToken.IsCancellationRequested)
+                    {
+                        return;
+                    }
+
+                    var (result, error) = await WaitForValidChallengeAsync(c.url, cancellationToken);
+
+                    if (error == null)
+                    {
+                        done.Cancel();
+                        authorizationSuccess = true;
+                    } else
+                    {
+                        list.Add(result);
+                    }
 
                 }  catch (Exception ex)
+                {
+                    // do nothing...
+                    if (ex is TaskCanceledException)
                     {
-                        // do nothing...
-                        if (ex is not TaskCanceledException)
-                        {
-                            list.Add(System.Text.Json.JsonSerializer.Serialize(new { error = ex.ToString() }));
-                        }
+                        return;
                     }
+                    list.Add(new { error = ex.ToString() });
+                }
             }));
         }));
 
-        var orderReady = false;
-        for(int i=0;i<30;i++)
+        if (!authorizationSuccess)
         {
-            await Task.Delay(TimeSpan.FromSeconds(10));
-
-            var o = await this.RefreshOrder(order.url, cancellationToken);
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(o));
-            if (Regex.IsMatch("valid|ready", o.Status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
-            {
-                orderReady = true;
-                break;
-            }
-        }
-
-        if(!orderReady)
-        {
-            
-            if (!authorizationSuccess)
-            {
-                var error = "[" + String.Join(",\n", list ) + "]";
-                Console.WriteLine(error);
-                throw new InvalidOperationException(error);
-            }
+            throw new InvalidOperationException(System.Text.Json.JsonSerializer.Serialize(new { errors = list.ToArray()}));
         }
 
         var csr = GenerateCsr(domainKey, hostNames);
 
         await this.FinalizeOrderAsync(order.Finalize, csr, cancellationToken);
 
-        var result = await WaitForValidChallengeAsync(order.url, cancellationToken);
+        var (result, error) = await WaitForValidChallengeAsync(order.url, cancellationToken);
+
+        if(error != null) {
+            throw new InvalidOperationException(System.Text.Json.JsonSerializer.Serialize(new { error }));
+        }
 
         var certificate = (result!["certificate"] as JsonValue)!.ToString();
 
@@ -117,31 +115,34 @@ partial class AcmeClient
 
         return cert.Certificate;
 
-        async Task<System.Text.Json.Nodes.JsonObject?> WaitForValidChallengeAsync(
+        async Task<(System.Text.Json.Nodes.JsonObject? result, string? error)> WaitForValidChallengeAsync(
             string url,
-            CancellationToken cancellationToken,
-            Action? onReady = null)
+            CancellationToken cancellationToken)
         {
+            JsonObject? c = null;
+
             for(int i=0;i<30;i++) {
                 var request = await ApiRequest(url, (object?)null, cancellationToken, true, false);
-                var c = await request.GetResponseAsync<System.Text.Json.Nodes.JsonObject>(_httpClient, cancellationToken);
+                c = await request.GetResponseAsync<System.Text.Json.Nodes.JsonObject>(_httpClient, cancellationToken);
                 var status = (c["status"] as JsonValue)!.ToString();
-                Console.WriteLine(c.ToJsonString());
+                // Console.WriteLine(c.ToJsonString());
                 if (RegExHelper.IsFinished(status))
                 {
 
                     if(RegExHelper.IsReady(status))
                     {
-                        onReady?.Invoke();
-                    }
+                        return (c, null);
+                    } 
 
-                    return c;
+                    // this means it is failed..
+                    return (c, c.ToJsonString());
+                    
+
                 }
                 await Task.Delay(TimeSpan.FromSeconds(5));
             }
 
-            return null;
-
+            return (c, "timedout");
         }
 
         async Task<AcmeChallengeGroup[]> GetAuthorizationChallengesAsync(bool hasWildcard, AcmeOrder order, CancellationToken cancellationToken)
