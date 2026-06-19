@@ -41,8 +41,8 @@ public class CertificateInstaller: IMiddleware
         this.storagePath = System.Environment.GetEnvironmentVariable("FORWARD_CERT_STORE") ?? "/cache/certs/";
         FileEx.EnsureDirectory(this.storagePath);
         this.accountKeyPath = System.IO.Path.Join(this.storagePath, "account.key");
-        this.awsAccessKey = System.Environment.GetEnvironmentVariable("AWS_ACCESS_KEY");
-        this.awsAccessKeySecret = System.Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_SECRET");
+        this.awsAccessKey = System.Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+        this.awsAccessKeySecret = System.Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
         this.awsZoneID = System.Environment.GetEnvironmentVariable("AWS_ZONE_ID");
         this.awsZoneSuffix = System.Environment.GetEnvironmentVariable("AWS_ZONE_SUFFIX");
         this.acmeEndPoint = System.Environment.GetEnvironmentVariable("ACME_END_POINT") ?? "staging";
