@@ -9,7 +9,7 @@ services:
     build:
       context: .
     environment:
-      - AWS_ACCESS_KEY=$AWS_ACCESS_KEY
-      - AWS_ACCESS_KEY_SECRET=$AWS_ACCESS_KEY_SECRET
+      - AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY
+      - AWS_SECRET_ACCESS_KEY=$AWS_ACCESS_KEY_SECRET
       - AWS_ZONE_ID=Z05080003S98042TH84JI
       - AWS_ZONE_SUFFIX=.le.nsmailer.in

@@ -11,8 +11,8 @@
 # Environment Variables
 
 ```
-AWS_ACCESS_KEY= your aws access key
-AWS_ACCESS_KEY_SECRET= secret
+AWS_ACCESS_KEY_ID= your aws access key
+AWS_SECRET_ACCESS_KEY= secret
 AWS_ZONE_ID=
 AWS_ZONE_SUFFIX=le01.[wildcardplaceholder.com]
 
