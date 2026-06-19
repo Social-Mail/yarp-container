@@ -171,7 +171,7 @@ partial class AcmeClient
                     c.KeyAuthorization = $"{c.Token}.{keysum}";
                     if (hasWildcard)
                     {
-                        if (c.Type.StartsWith("dns", StringComparison.OrdinalIgnoreCase))
+                        if (c.Type.StartsWith("dns-01", StringComparison.OrdinalIgnoreCase))
                         {
                             c.KeyAuthorization = Signer.SHA256Base64Url(c.KeyAuthorization);
                             g.Challenges.Add(c);
