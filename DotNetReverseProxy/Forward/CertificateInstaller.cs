@@ -10,6 +10,7 @@ using Amazon.Route53.Model;
 using Amazon.Runtime;
 using DotNetAcmeClient;
 using DotNetAcmeClient.Models;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Caching.Memory;
@@ -18,7 +19,7 @@ namespace DotNetReverseProxy;
 
 public class CertificateInstaller: IMiddleware
 {
-    private readonly IMemoryCache cache;
+    private readonly JsonLogger logger;
     private readonly HttpClient httpClient;
     private readonly string accountKeyPath;
     private readonly string? awsAccessKey;
@@ -32,9 +33,9 @@ public class CertificateInstaller: IMiddleware
     private readonly string? acmeEAB;
     private readonly string? acmeEABHmac;
 
-    public CertificateInstaller(IMemoryCache cache)
+    public CertificateInstaller(IMemoryCache cache, JsonLogger logger)
     {
-        this.cache = cache;
+        this.logger = logger;
         this.httpClient = new HttpClient(new SimpleConsoleLoggerHandler( new HttpClientHandler() ));
         this.storagePath = System.Environment.GetEnvironmentVariable("FORWARD_CERT_STORE") ?? "/cache/certs/";
         FileEx.EnsureDirectory(this.storagePath);
@@ -192,13 +193,6 @@ public class CertificateInstaller: IMiddleware
     {
         var request = context.Request;
         var response = context.Response;
-        if (!request.Path.StartsWithSegments("/.well-known/acme-challenge/"))
-        {
-            // redirect..
-            response.Headers.Location = request.GetDisplayUrl().Replace("http://", "https://");
-            response.StatusCode = 301;
-            return;
-        }
         var tokens = request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
         var file = tokens[2];
         var challengePath = GetChallengePath(file);
@@ -218,9 +212,16 @@ public class CertificateInstaller: IMiddleware
         FileEx.EnsureDirectory(dir);
         return System.IO.Path.Join(dir + file);
     }
+}
 
-    internal async Task GetAsync(string serverName)
+public static class CertificateInstallerExtensions
+{
+    public static IApplicationBuilder UseCertificateInstaller(this IApplicationBuilder app)
     {
-        throw new NotImplementedException();
+        app.Map("/.well-known/acme-challenge", mapped =>
+        {
+            mapped.UseMiddleware<CertificateInstaller>();
+        });
+        return app;
     }
 }

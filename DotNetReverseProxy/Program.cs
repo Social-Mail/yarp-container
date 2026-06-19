@@ -118,7 +118,7 @@ try
     var app = builder.Build();
 
     // we need to use this as soon as possible...
-    app.UseMiddleware<CertificateInstaller>();
+    app.UseCertificateInstaller();
 
     app.UseResponseCompression();
     app.UseRouting();
