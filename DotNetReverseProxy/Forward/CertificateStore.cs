@@ -132,7 +132,7 @@ public class CertificateStore
 
 
         // check CNAME for wildcard...
-        var host = await ClientX.QueryDns(cnameFrom, DnsRecordType.CNAME, DnsEndpoint.GoogleQuic);
+        var host = await ClientX.QueryDns(cnameFrom, DnsRecordType.CNAME, DnsEndpoint.Cloudflare);
         if (host == null)
         {
             Console.WriteLine($"No Dns Entry {cnameFrom} -> {cnameTo}");
