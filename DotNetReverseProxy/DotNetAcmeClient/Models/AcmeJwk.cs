@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using Microsoft.IdentityModel.Tokens;
 
-namespace DotNetAcmeClient;
+namespace DotNetAcmeClient.Models;
 
 public class AcmeJwk
 {

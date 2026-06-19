@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace DotNetAcmeClient;
+namespace DotNetAcmeClient.Models;
 
 public class AcmeChallengeGroup
 {
@@ -13,9 +13,9 @@ public class AcmeChallengeGroup
     public AcmeChallengeGroup(string domainName, string type, AcmeAuthorization authorization)
     {
         Challenges = new ();
-        this.Type = type;
-        this.DomainName = domainName;
-        this.Authorization = authorization;
+        Type = type;
+        DomainName = domainName;
+        Authorization = authorization;
     }
 
 }

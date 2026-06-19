@@ -9,6 +9,7 @@ using Amazon;
 using Amazon.Route53.Model;
 using Amazon.Runtime;
 using DotNetAcmeClient;
+using DotNetAcmeClient.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Caching.Memory;

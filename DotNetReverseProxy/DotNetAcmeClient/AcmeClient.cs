@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System.Net.Http.Headers;
 using RetroCoreFit;
 using System.Linq;
+using DotNetAcmeClient.Models;
 
 namespace DotNetAcmeClient;
 

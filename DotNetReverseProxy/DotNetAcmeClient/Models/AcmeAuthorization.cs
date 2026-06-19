@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace DotNetAcmeClient;
+namespace DotNetAcmeClient.Models;
 
 public class AcmeAuthorization
 {

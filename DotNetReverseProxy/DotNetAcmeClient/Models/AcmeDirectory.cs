@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace DotNetAcmeClient;
+namespace DotNetAcmeClient.Models;
 
 // Data Models
 public class AcmeDirectory

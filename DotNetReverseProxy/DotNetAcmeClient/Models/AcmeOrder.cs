@@ -1,7 +1,7 @@
 using System.Text.Json.Serialization;
 using RetroCoreFit;
 
-namespace DotNetAcmeClient;
+namespace DotNetAcmeClient.Models;
 
 public class AcmeOrder: AcmeStatus
 {

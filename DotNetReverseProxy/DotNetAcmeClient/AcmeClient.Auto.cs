@@ -10,6 +10,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using DotNetAcmeClient.Models;
 using Microsoft.IdentityModel.Tokens;
 using RetroCoreFit;
 
@@ -41,11 +42,7 @@ partial class AcmeClient
 
         var hasWildcard = hostNames.Any((h) => h.StartsWith("*."));
 
-        Console.WriteLine($"Order: {JsonSerializer.Serialize(order, jsonOptions)}");
-
         var authorizations = await GetAuthorizationChallengesAsync(hasWildcard, order, cancellationToken);
-
-        Console.WriteLine($"Authorizations: {JsonSerializer.Serialize(authorizations, jsonOptions)}");
 
         await using var d = await applyChallenges(authorizations, cancellationToken);
 
@@ -149,8 +146,12 @@ partial class AcmeClient
                     c.KeyAuthorization = $"{c.Token}.{keysum}";
                     if (c.Type == "dns-01")
                     {
-                        c.KeyAuthorization = Signer.SHA256Base64Url(c.KeyAuthorization);
-                        g.Challenges.Add(c);
+                        if (hasWildcard)
+                        {
+                            c.KeyAuthorization = Signer.SHA256Base64Url(c.KeyAuthorization);
+                            g.Challenges.Add(c);
+                            continue;
+                        }
                         continue;
                     }
                     if(hasWildcard) {
