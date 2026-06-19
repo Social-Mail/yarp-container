@@ -125,7 +125,7 @@ partial class AcmeClient
                 var request = await ApiRequest(url, (object?)null, cancellationToken, true, false);
                 var c = await request.GetResponseAsync<System.Text.Json.Nodes.JsonObject>(_httpClient, cancellationToken);
                 var status = (c["status"] as JsonValue)!.ToString();
-                // Console.WriteLine(c.ToJsonString());
+                Console.WriteLine(c.ToJsonString());
                 if (RegExHelper.IsFinished(status))
                 {
 
