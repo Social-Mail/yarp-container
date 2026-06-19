@@ -45,17 +45,28 @@ partial class AcmeClient
 
         bool authorizationSuccess = false;
 
+        var done = new CancellationTokenSource();
+
+        var doneToken = done.Token;
+
         var list = new List<string>();
         await Task.WhenAll(authorizations.Select(async (a) =>
         {
             await Task.WhenAll(a.Challenges.Select(async (c) =>
             {
-                try
-                {
-                    await this.CompleteChallengeAsync(c.url, cancellationToken);
-                    authorizationSuccess = true;
+            try
+            {
+                await this.CompleteChallengeAsync(c.url, doneToken);
 
-                    await WaitForValidChallengeAsync(c.url, cancellationToken);
+                if (doneToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                await WaitForValidChallengeAsync(c.url, cancellationToken, () => {
+                    authorizationSuccess = true;
+                    done.Cancel();
+                });
 
                 }  catch (Exception ex)
                     {
@@ -105,15 +116,24 @@ partial class AcmeClient
 
         return cert;
 
-        async Task<System.Text.Json.Nodes.JsonObject?> WaitForValidChallengeAsync(string url, CancellationToken cancellationToken)
+        async Task<System.Text.Json.Nodes.JsonObject?> WaitForValidChallengeAsync(
+            string url,
+            CancellationToken cancellationToken,
+            Action? onReady = null)
         {
             for(int i=0;i<30;i++) {
                 var request = await ApiRequest(url, (object?)null, cancellationToken, true, false);
                 var c = await request.GetResponseAsync<System.Text.Json.Nodes.JsonObject>(_httpClient, cancellationToken);
                 var status = (c["status"] as JsonValue)!.ToString();
-                Console.WriteLine(c.ToJsonString());
-                if (Regex.IsMatch("valid|ready", status, RegexOptions.Compiled | RegexOptions.IgnoreCase))
+                // Console.WriteLine(c.ToJsonString());
+                if (RegExHelper.IsFinished(status))
                 {
+
+                    if(RegExHelper.IsReady(status))
+                    {
+                        onReady?.Invoke();
+                    }
+
                     return c;
                 }
                 await Task.Delay(TimeSpan.FromSeconds(5));
@@ -134,12 +154,18 @@ partial class AcmeClient
                 var keysum = Signer.SHA256Base64Url(System.Text.Json.JsonSerializer.Serialize(jwk, jsonOptions));
                 foreach(var c in auth.Challenges) {
                     var k = c.Type;
-                    if(!pairs.TryGetValue(k, out var g))
+
+                    // we will skip this for now..
+                    if (c.Type.StartsWith("tls"))
+                    {
+                        continue;
+                    }
+
+                    if (!pairs.TryGetValue(k, out var g))
                     {
                         g = new AcmeChallengeGroup(auth.Identifier.Value, k, auth);
                         pairs.Add(k, g);
                     }
-
                     c.KeyAuthorization = $"{c.Token}.{keysum}";
                     if (hasWildcard)
                     {
