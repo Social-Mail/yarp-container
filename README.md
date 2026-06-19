@@ -16,6 +16,10 @@ AWS_ACCESS_KEY_SECRET= secret
 AWS_ZONE_ID=
 AWS_ZONE_SUFFIX=le01.[wildcardplaceholder.com]
 
+ACME_END_POINT=(production|staging) or full url, default is staging
+ACME_EAB=external account binding
+ACME_EAB_HMAC=hmac
+
 # This will be used to check if given host points to this IP or not
 # Only if it matches the IP, ACME certificate will be requested
 SELF_IPs=

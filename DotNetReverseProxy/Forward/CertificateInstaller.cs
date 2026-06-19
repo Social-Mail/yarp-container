@@ -30,6 +30,10 @@ public class CertificateInstaller: IMiddleware
 
     private readonly string storagePath;
 
+    private readonly string acmeEndPoint;
+    private readonly string? acmeEAB;
+    private readonly string? acmeEABHmac;
+
     public CertificateInstaller(IMemoryCache cache)
     {
         this.cache = cache;
@@ -41,6 +45,19 @@ public class CertificateInstaller: IMiddleware
         this.awsAccessKeySecret = System.Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_SECRET");
         this.awsZoneID = System.Environment.GetEnvironmentVariable("AWS_ZONE_ID");
         this.awsZoneSuffix = System.Environment.GetEnvironmentVariable("AWS_ZONE_SUFFIX");
+        this.acmeEndPoint = System.Environment.GetEnvironmentVariable("ACME_END_POINT") ?? "staging";
+        this.acmeEAB = System.Environment.GetEnvironmentVariable("ACME_EAB");
+        this.acmeEABHmac= System.Environment.GetEnvironmentVariable("ACME_EAB_HMAC");
+
+        switch (this.acmeEndPoint?.ToLower())
+        {
+            case "staging":
+                this.acmeEndPoint = AcmeUrls.letsEncrypt.staging;
+                break;
+            case "production":
+                this.acmeEndPoint = AcmeUrls.letsEncrypt.production;
+                break;
+        }
 
         if (this.awsZoneSuffix != null && !this.awsZoneSuffix.StartsWith("."))
         {
@@ -50,7 +67,9 @@ public class CertificateInstaller: IMiddleware
 
     internal async Task<CertificateInfo> InstallCertificateAsync(string serverName)
     {
-        var client = new AcmeClient( httpClient, AcmeUrls.letsEncrypt.staging, this.accountKeyPath);
+        var client = this.acmeEAB != null && this.acmeEABHmac != null
+                ? new AcmeClient(httpClient, this.acmeEndPoint, this.acmeEAB, this.acmeEABHmac)
+                : new AcmeClient( httpClient, this.acmeEndPoint, this.accountKeyPath);
 
         using RSA domainKey = RSA.Create(2048);
         var cert = await client.CreateCertificateAsync(domainKey, serverName, this.SaveChallengesAsync);
