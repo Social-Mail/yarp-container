@@ -126,13 +126,21 @@ public class CertificateStore
         var cnameFrom = $"_acme-challenge." + serverName;
         var cnameTo = $"{serverName}{this.awsZoneSuffix}";
 
+        Console.WriteLine($"Has Dns Forward {cnameFrom} -> {cnameTo} ?");
+
         // check CNAME for wildcard...
         var host = await ClientX.QueryDns(cnameFrom, DnsRecordType.CNAME, DnsEndpoint.GoogleQuic);
         if (host == null)
         {
+            Console.WriteLine($"No Dns Forward {cnameFrom} -> {cnameTo}");
             return false;
         }
-        return host.Answers.Any((a) => a.Data == cnameTo);
+        var r = host.Answers.Any((a) => a.Data == cnameTo);
+        if (!r)
+        {
+            Console.WriteLine($"No Dns Forward {cnameFrom} -> {cnameTo}");
+        }
+        return r;
     }
 
     private async Task<X509Certificate2?> LoadCertFromFile(string serverName)
