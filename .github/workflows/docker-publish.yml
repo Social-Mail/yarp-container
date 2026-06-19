@@ -57,4 +57,4 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/social-mail/yarp-proxy:latest, ghcr.io/social-mail/yarp-proxy:${{ github.sha }}
+          tags: ghcr.io/social-mail/yarp-container:latest, ghcr.io/social-mail/yarp-container:${{ github.sha }}
