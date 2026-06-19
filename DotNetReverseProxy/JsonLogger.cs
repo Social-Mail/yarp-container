@@ -1,14 +1,10 @@
 using System;
 using System.IO;
-using System.Net.Http;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace DotNetReverseProxy;
 
 public class JsonLogger {
-
-    public static JsonLogger Instance = new JsonLogger();
 
     private JsonSerializerOptions options;
     private TextWriter error;

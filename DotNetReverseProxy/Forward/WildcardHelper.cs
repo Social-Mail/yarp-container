@@ -1,5 +1,4 @@
-﻿using Microsoft.Extensions.FileSystemGlobbing.Internal;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace DotNetReverseProxy.Forward;
 

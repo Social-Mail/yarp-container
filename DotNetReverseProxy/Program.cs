@@ -1,9 +1,7 @@
 ﻿using DotNetReverseProxy;
 using DotNetReverseProxy.Forward;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -12,22 +10,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using System.Linq;
 using System.Net;
-using System.Net.Http;
 using System.Net.Quic;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.RateLimiting;
-using System.Threading.Tasks;
-using Yarp.ReverseProxy.Forwarder;
-using Yarp.ReverseProxy.Transforms;
 
 try
 {
@@ -109,6 +97,7 @@ try
 
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
+    builder.Services.AddSingleton<JsonLogger>();
     builder.Services.AddSingleton<CertificateStore>();
     builder.Services.AddSingleton<CertificateInstaller>();
     builder.Services.AddSingleton<Forwarder>();

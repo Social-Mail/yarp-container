@@ -13,8 +13,6 @@ using DotNetAcmeClient.Models;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.Caching.Memory;
-using Nager.PublicSuffix;
-using Nager.PublicSuffix.RuleProviders;
 
 namespace DotNetReverseProxy;
 

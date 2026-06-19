@@ -1,77 +1,19 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using System;
-using System.Collections.Concurrent;
-using System.Globalization;
 using System.Text.RegularExpressions;
-using System.Threading;
 using System.Threading.RateLimiting;
-using System.Threading.Tasks;
 
 namespace DotNetReverseProxy;
 
 public static class SocialMailRateLimiter
 {
 
-    private static readonly TimeSpan TrackExpiration = TimeSpan.FromMinutes(15);
-
-    private static string CacheKey(this HttpContext context)
+    public static string CacheKey(this HttpContext context)
     {
         return $"HttpStatus_Error_{context.Connection?.RemoteIpAddress?.ToString() ?? "0.0.0.0"}";
-    }
-
-    public static void RegisterStatus(this HttpContext context, TimeSpan ts, Exception? ex)
-    {
-        var cache = context.RequestServices.GetService<StripedCacheService>()!;
-        var cacheKey = context.CacheKey();
-        var request = context.Request;
-        var response = context.Response;
-        var status = response.StatusCode;
-        var userAgent = request.Headers.UserAgent.ToString();
-        var duration = ts.TotalMilliseconds.ToString("0.##", CultureInfo.InvariantCulture) + "ms";
-        var time = DateTime.UtcNow;
-        var error = ex?.ToString();
-        if (context.Response.StatusCode >= 400)
-        {
-            var v = cache.Update<int?>(cacheKey, (x) => x + 1, 1, TrackExpiration);
-            JsonLogger.Instance.LogError(new
-            {
-                status,
-                userAgent,
-                url = request.GetDisplayUrl(),
-                ip = context.Connection.RemoteIpAddress?.ToString(),
-                error,
-                duration
-            });
-        }
-        else
-        {
-            JsonLogger.Instance.LogError(new
-            {
-                status,
-                userAgent,
-                url = request.GetDisplayUrl(),
-                ip = context.Connection.RemoteIpAddress?.ToString(),
-                error,
-                duration
-            });
-
-            var currentCount = cache.Get<int?>(cacheKey);
-            if (currentCount == null)
-            {
-                return;
-            }
-            if (currentCount <= 1)
-            {
-                cache.Remove(cacheKey);
-                return;
-            }
-            cache.Update<int?>(cacheKey, (x) => x - 1, 1, TrackExpiration);
-        }
     }
 
     public static void AddSocialMailRateLimiter(this IServiceCollection services)

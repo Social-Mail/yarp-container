@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Net;
 using System.Net.Http;
@@ -16,16 +17,28 @@ namespace DotNetReverseProxy;
 
 public class Forwarder: IMiddleware
 {
+    private static readonly TimeSpan TrackExpiration = TimeSpan.FromMinutes(15);
+
     private readonly IHttpForwarder forwarder;
     private readonly ForwarderRequestConfig requestOptions;
     private readonly HttpMessageInvoker client;
     private readonly ReverseHostFinder hostFinder;
+    private readonly JsonLogger logger;
+    private readonly StripedCacheService stripedCache;
 
-    public Forwarder(CertificateInstaller store, IHttpForwarder forwarder, ReverseHostFinder hostFinder)
+
+    public Forwarder(
+        CertificateInstaller store,
+        IHttpForwarder forwarder,
+        ReverseHostFinder hostFinder,
+        JsonLogger logger,
+        StripedCacheService stripedCache)
     {
         this.forwarder = forwarder;
         this.requestOptions = new ForwarderRequestConfig { ActivityTimeout = TimeSpan.FromSeconds(100) };
         this.hostFinder = hostFinder;
+        this.logger = logger;
+        this.stripedCache = stripedCache;
         this.client = new HttpMessageInvoker(new SocketsHttpHandler
         {
             UseProxy = false,
@@ -113,6 +126,55 @@ public class Forwarder: IMiddleware
             }
         }
 
-        httpContext.RegisterStatus(DateTime.UtcNow - start, exception);
+        RegisterStatus(httpContext, DateTime.UtcNow - start, exception);
+    }
+
+    void RegisterStatus(HttpContext context, TimeSpan ts, Exception? ex)
+    {
+        var cacheKey = context.CacheKey();
+        var request = context.Request;
+        var response = context.Response;
+        var status = response.StatusCode;
+        var userAgent = request.Headers.UserAgent.ToString();
+        var duration = ts.TotalMilliseconds.ToString("0.##", CultureInfo.InvariantCulture) + "ms";
+        var time = DateTime.UtcNow;
+        var error = ex?.ToString();
+        if (context.Response.StatusCode >= 400)
+        {
+            var v = stripedCache.Update<int?>(cacheKey, (x) => x + 1, 1, TrackExpiration);
+            logger.LogError(new
+            {
+                status,
+                userAgent,
+                url = request.GetDisplayUrl(),
+                ip = context.Connection.RemoteIpAddress?.ToString(),
+                error,
+                duration
+            });
+        }
+        else
+        {
+            logger.LogError(new
+            {
+                status,
+                userAgent,
+                url = request.GetDisplayUrl(),
+                ip = context.Connection.RemoteIpAddress?.ToString(),
+                error,
+                duration
+            });
+
+            var currentCount = stripedCache.Get<int?>(cacheKey);
+            if (currentCount == null)
+            {
+                return;
+            }
+            if (currentCount <= 1)
+            {
+                stripedCache.Remove(cacheKey);
+                return;
+            }
+            stripedCache.Update<int?>(cacheKey, (x) => x - 1, 1, TrackExpiration);
+        }
     }
 }
