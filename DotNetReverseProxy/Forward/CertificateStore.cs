@@ -47,10 +47,15 @@ public class CertificateStore
         serverName = serverName.ToLower();
         /// It is important to cache this for 15 minutes
         /// So even in case of DDOS, we are not going to forward it further
-        return cache.GetOrCreate($"certificate-store-{serverName}", (c) =>
+        var key = $"certificate-store-{serverName}";
+        return cache.GetOrCreate(key, (c) =>
         {
-            c.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
-            return _GetAsync(serverName);
+            lock(this) {
+                return cache.GetOrCreate(key, (c) => {
+                    c.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
+                    return _GetAsync(serverName);
+                });
+            }
         })!;
     }
     internal async Task<X509Certificate2> _GetAsync(string serverName)
@@ -60,23 +65,9 @@ public class CertificateStore
             throw new InvalidOperationException($"{serverName} does not resolve to this server.");
         }
 
-        // need file lock to prevent multiple installation...
-        using var _lock = await LockFile.LockAsync($"get-or-install-server-certificate-{serverName}");
-
-        var cert = await LoadCertFromFile(serverName);
-        if (cert != null)
-        {
+        var cert = await LoadCached(serverName);
+        if (cert != null) {
             return cert;
-        }
-
-        var wildcard = WildcardHelper.ReplaceAsFileName(serverName);
-        if (wildcard != null)
-        {
-            cert = await LoadCertFromFile(wildcard);
-            if (cert != null)
-            {
-                return cert;
-            }
         }
 
         var originalName = serverName;
@@ -84,6 +75,8 @@ public class CertificateStore
         try {
 
             // install and save...
+            // need file lock to prevent multiple installation...
+            using var _lock = await LockFile.LockAsync($"get-or-install-server-certificate-{serverName}");
 
             var certFileName = serverName;
             if (this.awsZoneSuffix != null) {
@@ -106,6 +99,26 @@ public class CertificateStore
             });
             return Create24HourCertificate(originalName);
         }
+    }
+
+    private async Task<X509Certificate2?> LoadCached(string serverName)
+    {
+        var cert = await LoadCertFromFile(serverName);
+        if (cert != null)
+        {
+            return cert;
+        }
+
+        var wildcard = WildcardHelper.ReplaceAsFileName(serverName);
+        if (wildcard != null)
+        {
+            cert = await LoadCertFromFile(wildcard);
+            if (cert != null)
+            {
+                return cert;
+            }
+        }
+        return null;
     }
 
     private async Task<bool> HasDnsForward(string serverName)
