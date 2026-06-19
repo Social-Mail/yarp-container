@@ -129,6 +129,7 @@ public class CertificateStore
 
         var cnameFrom = $"_acme-challenge." + root;
         var cnameTo = $"{root}{this.awsZoneSuffix}";
+        var cnameToDot = $"{root}{this.awsZoneSuffix}.";
 
 
         // check CNAME for wildcard...
@@ -138,7 +139,7 @@ public class CertificateStore
             Console.WriteLine($"No Dns Entry {cnameFrom} -> {cnameTo}");
             return false;
         }
-        var r = host.Answers.Any((a) => a.Data == cnameTo);
+        var r = host.Answers.Any((a) => a.Data == cnameTo || a.Data == cnameToDot);
         if (!r)
         {
             Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new {
