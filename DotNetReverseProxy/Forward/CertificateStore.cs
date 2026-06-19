@@ -137,7 +137,7 @@ public class CertificateStore
         var cert = await File.ReadAllTextAsync(certPath);
         var key = await File.ReadAllTextAsync(keyPath);
         var xCert = X509Certificate2.CreateFromPem(cert, key);
-        if(xCert.NotAfter > DateTime.UtcNow.AddDays(1))
+        if(xCert.NotAfter < DateTime.UtcNow.AddDays(5))
         {
             // delete certs...
             File.Delete(certPath);
