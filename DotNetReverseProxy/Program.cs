@@ -129,6 +129,8 @@ try
 
     app.UseMiddleware<Forwarder>();
 
+    app.Run();
+
 }
 catch (Exception ex)
 {
