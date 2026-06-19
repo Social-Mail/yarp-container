@@ -201,7 +201,7 @@ public class CertificateInstaller: IMiddleware
             response.StatusCode = 404;
             return;
         }
-        var content = await System.IO.File.ReadAllTextAsync(file);
+        var content = await System.IO.File.ReadAllTextAsync(challengePath);
         response.StatusCode = 200;
         await response.WriteAsync(content);
     }
