@@ -5,6 +5,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -25,7 +26,7 @@ public class CertificateStore
     private readonly IPAddress[] SelfIPs;
     private readonly string localStorePath;
     private readonly string? awsZoneSuffix;
-
+    private readonly bool selfSigned;
     private readonly IMemoryCache cache;
 
     public CertificateStore(CertificateInstaller installer, JsonLogger logger, IMemoryCache cache)
@@ -38,6 +39,7 @@ public class CertificateStore
                 .ToArray();
         this.localStorePath = System.Environment.GetEnvironmentVariable("FORWARD_CERT_STORE") ?? "/cache/certs/";
         this.awsZoneSuffix = System.Environment.GetEnvironmentVariable("AWS_ZONE_SUFFIX");
+        this.selfSigned = System.Environment.GetEnvironmentVariable("ACME_MODE")?.Equals("self-signed") ?? false;
         FileEx.EnsureDirectory(this.localStorePath);
     }
 
@@ -60,19 +62,26 @@ public class CertificateStore
     }
     internal async Task<X509Certificate2> _GetAsync(string serverName)
     {
-        if (!await Resolves(serverName))
-        {
-            throw new InvalidOperationException($"{serverName} does not resolve to this server.");
-        }
-
-        var cert = await LoadCached(serverName);
-        if (cert != null) {
-            return cert;
-        }
-
         var originalName = serverName;
 
+        if (selfSigned)
+        {
+            return await Create24HourCertificate(serverName);
+        }
+
         try {
+            if (String.IsNullOrWhiteSpace(serverName) || !await Resolves(serverName))
+            {
+                throw new InvalidOperationException($"{serverName} does not resolve to this server.");
+                // send self signed certificate...
+            }
+
+            var cert = await LoadCached(serverName);
+            if (cert != null) {
+                return cert;
+            }
+
+
 
             // install and save...
             // need file lock to prevent multiple installation...
@@ -97,7 +106,7 @@ public class CertificateStore
                 error = ex.ToString(),
                 host = serverName
             });
-            return Create24HourCertificate(originalName);
+            return await Create24HourCertificate(originalName);
         }
     }
 
@@ -200,8 +209,17 @@ public class CertificateStore
         return false;
     }
 
-    public static X509Certificate2 Create24HourCertificate(string subjectName)
+    public async Task<X509Certificate2> Create24HourCertificate(string subjectName)
     {
+
+        var certFileName = "self-signed-" + subjectName;
+
+        var xCert = await LoadCertFromFile(certFileName);
+        if(xCert != null)
+        {
+            return xCert;
+        }
+
         // 1. Generate RSA key pair (2048-bit is standard)
         using (RSA rsa = RSA.Create(2048))
         {
@@ -228,12 +246,16 @@ public class CertificateStore
                 )
             );
 
-            // 5. Define validity period: Start now, expire in exactly 24 hours
+            // 5. Define validity period: Start now, expire in exactly 30 days
             DateTimeOffset notBefore = DateTimeOffset.UtcNow;
-            DateTimeOffset notAfter = notBefore.AddHours(24);
+            DateTimeOffset notAfter = notBefore.AddDays(30);
 
             // 6. Create the self-signed certificate
-            return request.CreateSelfSigned(notBefore, notAfter);
+            xCert = request.CreateSelfSigned(notBefore, notAfter);
+            var cert = xCert.ExportCertificatePem();
+            var keyPem = rsa.ExportRSAPrivateKeyPem();
+            await SaveCertToFile(certFileName, new CertificateInfo { Cert= cert, Key = keyPem });
+            return xCert;
         }
     }
 }
