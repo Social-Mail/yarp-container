@@ -169,8 +169,8 @@ public class CertificateStore
         if (!File.Exists(certPath) || !File.Exists(keyPath)) {
             return null;
         }
-        var cert = await File.ReadAllTextAsync(certPath);
-        var key = await File.ReadAllTextAsync(keyPath);
+        var cert = await File.ReadAllTextAsync(certPath, System.Text.Encoding.UTF8);
+        var key = await File.ReadAllTextAsync(keyPath, System.Text.Encoding.UTF8);
         var xCert = X509Certificate2.CreateFromPem(cert, key);
         if(xCert.NotAfter < DateTime.UtcNow.AddDays(5))
         {
@@ -188,8 +188,8 @@ public class CertificateStore
         FileEx.EnsureDirectory(folder);
         var certPath = Path.Join(folder, "cert.pem");
         var keyPath = Path.Combine(folder, "key.pem");
-        await File.WriteAllTextAsync(certPath, cert.Cert);
-        await File.WriteAllTextAsync(keyPath, cert.Key);
+        await File.WriteAllTextAsync(certPath, cert.Cert, System.Text.Encoding.UTF8);
+        await File.WriteAllTextAsync(keyPath, cert.Key, System.Text.Encoding.UTF8);
     }
 
     async Task<bool> Resolves(string serverName)
