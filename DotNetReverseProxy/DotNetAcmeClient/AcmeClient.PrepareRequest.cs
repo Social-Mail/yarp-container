@@ -123,7 +123,7 @@ partial class AcmeClient
             var payload = System.Text.Json.JsonSerializer.SerializeToNode(jwk, jsonOptions) as JsonObject;
             var result = PrepareSignedBody("HS256", url, payload, kid, nonce);
 
-            var key = Convert.FromBase64String(hmacKey);
+            var key = Base64UrlEncoder.DecodeBytes(hmacKey);
 
             var utf8 = System.Text.Encoding.UTF8;
 
