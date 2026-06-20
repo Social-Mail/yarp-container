@@ -46,7 +46,7 @@ public class CertificateInstaller: IMiddleware
         this.awsZoneID = System.Environment.GetEnvironmentVariable("AWS_ZONE_ID");
         this.awsZoneSuffix = System.Environment.GetEnvironmentVariable("AWS_ZONE_SUFFIX");
         this.acmeEndPoint = System.Environment.GetEnvironmentVariable("ACME_END_POINT") ?? "staging";
-        this.acmeEAB = System.Environment.GetEnvironmentVariable("ACME_EAB");
+        this.acmeEAB = System.Environment.GetEnvironmentVariable("ACME_EAB_KID");
         this.acmeEABHmac= System.Environment.GetEnvironmentVariable("ACME_EAB_HMAC");
         this.acmeEmail = System.Environment.GetEnvironmentVariable("ACME_EMAIL");
 

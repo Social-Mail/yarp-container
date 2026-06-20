@@ -1,12 +1,12 @@
-# Usage
-
-1. For easy wildcard certificate generation, every domain must point to a single subdomain in Route53 zone.
-2. For example, CNAME `_acme-challenge` of `domain01.com` must be set to `domain01.com.le01.[wildcardplaceholder.com]`. Suffix must be set to `le01.[wildcardplaceholder.com]`. `[wildcardplaceholder.com]` can contain subdomain.
-3. Otherwise, single certificate is generated for requested host name.
-
-# Scope
-
-1. Generate certificates on the fly via http-01 challenges, save in given PG database. Only if the host points to given list of IPs in DNS, we will not try to create ACME certificate if DNS doesn't point.
+# Features
+1. YARP Reverse Proxy
+2. Automatic certificate installation with following conditions.
+    * If host points to `SELF_IPs` environment variable, then single host certificate is installed.
+    * If CNAME `_acme-challenge` prefix points to provided `AWS_ZONE_SUFFIX` environment variable. For exmaple, `_acme-challenge.zone01.com` points to `zone01.com.le01.[WildCardPlaceHolder.com]` where `le01.[WildCardPlaceHolder.com]` is zone suffix.
+3. Even for `WildCardPlaceHolder.com`, same configuration works, so you just need to supply single credential set. To support wildcard for multiple domains.
+4. Applys rate limiting by default.
+5. Setup host mapping via `forward.json`, format specified below.
+6. Wildcard mapping in `forward.json` will forward request to HTTP server and use text retrieved to forward further. This is in case if a server is multitanent server and it needs to map host to different port.
 
 # Environment Variables
 
@@ -17,7 +17,7 @@ AWS_ZONE_ID=
 AWS_ZONE_SUFFIX=le01.[wildcardplaceholder.com]
 
 ACME_END_POINT=(production|staging) or full url, default is staging
-ACME_EAB=external account binding
+ACME_EAB_KID=external account binding
 ACME_EAB_HMAC=hmac
 
 # This will be used to check if given host points to this IP or not
@@ -50,3 +50,5 @@ FORWARD_PORT= # can be unix path
     "8001": "*"
 }
 ```
+
+In above example, port 8001 is special port which runs a HTTP server and which will return the address where yarp should connect further. For example, if you have a multitanent cluster running on port 8001 and every host is running on different dynamically generated port. This tanent server will start the web application on demand.
