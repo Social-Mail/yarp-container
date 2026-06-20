@@ -38,6 +38,12 @@ partial class AcmeClient
         CancellationToken cancellationToken = default
     )
     {
+
+        this.Log(new
+        {
+            step="create-new-certificate",
+            @for=hostName
+        });
         // this will not save the certificate
         await this.InitializeAsync(emailAddress, cancellationToken);
 
