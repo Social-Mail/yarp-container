@@ -21,7 +21,7 @@ partial class AcmeClient
     public async Task<AcmeOrder> RefreshOrder(string url, CancellationToken cancellationToken)
     {
         var request = await ApiRequest(url, (object?)null, cancellationToken, true, false);
-        return (await request.GetResponseAsync<AcmeOrder>(this._httpClient, cancellationToken))!;
+        return (await request.AsJsonAsync<AcmeOrder>(this._httpClient, cancellationToken))!;
     }
 
     private void Log<T>(T item)
@@ -123,7 +123,7 @@ partial class AcmeClient
 
             for(int i=0;i<30;i++) {
                 var request = await ApiRequest(url, (object?)null, cancellationToken, true, false);
-                c = await request.GetResponseAsync<System.Text.Json.Nodes.JsonObject>(_httpClient, cancellationToken);
+                c = await request.AsJsonAsync<System.Text.Json.Nodes.JsonObject>(_httpClient, cancellationToken);
                 var status = (c["status"] as JsonValue)!.ToString();
                 // Console.WriteLine(c.ToJsonString());
                 if (RegExHelper.IsFinished(status))

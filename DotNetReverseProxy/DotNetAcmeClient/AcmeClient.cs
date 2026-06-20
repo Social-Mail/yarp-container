@@ -29,9 +29,9 @@ public partial class AcmeClient
         PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
     };
 
-    public AcmeClient(HttpClient httpClient, string directoryUrl, string accountKeyPath)
+    public AcmeClient(string directoryUrl, string accountKeyPath, HttpClient? httpClient = null)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _httpClient = httpClient ?? new HttpClient();
         _directoryUrl = directoryUrl ?? throw new ArgumentNullException(nameof(directoryUrl));
 
         // Set up default headers for ACME requests
@@ -41,9 +41,9 @@ public partial class AcmeClient
         LoadOrCreateAccountKey(accountKeyPath ?? throw new ArgumentNullException(nameof(accountKeyPath)));
     }
 
-    public AcmeClient(HttpClient httpClient, string directoryUrl, string accountKeyPath, string externalAccountBindingKID, string externalAccountBindingHmacKey)
+    public AcmeClient(string directoryUrl, string accountKeyPath, string externalAccountBindingKID, string externalAccountBindingHmacKey, HttpClient? httpClient = null)
     {
-        _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
+        _httpClient = httpClient ?? new HttpClient();
         _directoryUrl = directoryUrl ?? throw new ArgumentNullException(nameof(directoryUrl));
         _externalKid = externalAccountBindingKID ?? throw new ArgumentNullException(nameof(externalAccountBindingKID));
         _externalHmacKey= externalAccountBindingHmacKey ?? throw new ArgumentNullException(nameof(externalAccountBindingHmacKey));
@@ -95,7 +95,7 @@ public partial class AcmeClient
     public async Task InitializeAsync( string emailAddress, CancellationToken cancellationToken = default)
     {
         var request = RequestBuilder.Get(_directoryUrl);
-        _directory = (await request.GetResponseAsync<AcmeDirectory>(_httpClient, cancellationToken))!;
+        _directory = (await request.AsJsonAsync<AcmeDirectory>(_httpClient, cancellationToken))!;
         Console.WriteLine($"Found: {_directory.NewAccount}");
         await EnsureAccountExistsAsync(emailAddress, cancellationToken);
     }
@@ -132,7 +132,7 @@ public partial class AcmeClient
 
         var request = await ApiRequest(_directory.NewOrder, new { identifiers }, cancellationToken, true, false);
 
-        var order = (await request.GetResponseAsync<ApiResponse<AcmeOrder>>(_httpClient, cancellationToken))!;
+        var order = (await request.AsJsonAsync<ApiResponse<AcmeOrder>>(_httpClient, cancellationToken))!;
         order.Model.url = order.Headers["Location"];
         // Console.WriteLine("Order-Location: " + order.Model.url);
         // foreach(var k in order.Headers)
@@ -146,7 +146,7 @@ public partial class AcmeClient
     {
         var request = await ApiRequest(authorizationUrl, (object?)null, cancellationToken, true, false);
 
-        var r = (await request.GetResponseAsync<AcmeAuthorization>(_httpClient, cancellationToken))!;
+        var r = (await request.AsJsonAsync<AcmeAuthorization>(_httpClient, cancellationToken))!;
         r.url = authorizationUrl;
         return r;
     }
@@ -155,25 +155,25 @@ public partial class AcmeClient
     // {
     //     var request = await ApiRequest(challengeUrl, new {  }, cancellationToken, true, false);
 
-    //     return (await request.GetResponseAsync<AcmeChallenge>(_httpClient, cancellationToken))!;
+    //     return (await request.AsJsonAsync<AcmeChallenge>(_httpClient, cancellationToken))!;
     // }
 
     public async Task CompleteChallengeAsync(string challengeUrl, CancellationToken cancellationToken = default)
     {
         var request = await ApiRequest(challengeUrl, new { }, cancellationToken, true, false);
-        await request.GetResponseAsync(_httpClient, cancellationToken);
+        await request.AsResponseMessageAsync(_httpClient, cancellationToken);
     }
 
     public async Task<AcmeOrder> FinalizeOrderAsync(string orderUrl, string csr, CancellationToken cancellationToken = default)
     {
         var request = await ApiRequest(orderUrl, new { csr }, cancellationToken, true, false);
-        return (await request.GetResponseAsync<AcmeOrder>(_httpClient, cancellationToken))!;
+        return (await request.AsJsonAsync<AcmeOrder>(_httpClient, cancellationToken))!;
     }
 
     public async Task<(string Certificate, string[]? Links)> DownloadCertificateAsync(string certificateUrl, CancellationToken cancellationToken = default)
     {
         var request = await ApiRequest(certificateUrl, (object?)null, cancellationToken, true, false);
-        var response = (await request.GetResponseAsync(_httpClient, cancellationToken))!;
+        var response = (await request.AsResponseMessageAsync(_httpClient, cancellationToken))!;
         string[]? links = null;
         if (response.Headers.TryGetValues("link", out var linkValues)) {
             links = linkValues.ToArray();

@@ -20,7 +20,6 @@ namespace DotNetReverseProxy;
 public class CertificateInstaller: IMiddleware
 {
     private readonly JsonLogger logger;
-    private readonly HttpClient httpClient;
     private readonly string accountKeyPath;
     private readonly string? awsAccessKey;
     private readonly string? awsAccessKeySecret;
@@ -37,7 +36,6 @@ public class CertificateInstaller: IMiddleware
     public CertificateInstaller(IMemoryCache cache, JsonLogger logger)
     {
         this.logger = logger;
-        this.httpClient = new HttpClient(new SimpleConsoleLoggerHandler( new HttpClientHandler() ));
         this.storagePath = System.Environment.GetEnvironmentVariable("FORWARD_CERT_STORE") ?? "/cache/certs/";
         FileEx.EnsureDirectory(this.storagePath);
         this.accountKeyPath = System.IO.Path.Join(this.storagePath, "account.key");
@@ -69,8 +67,8 @@ public class CertificateInstaller: IMiddleware
     internal async Task<CertificateInfo> InstallCertificateAsync(string serverName)
     {
         var client = this.acmeEAB != null && this.acmeEABHmac != null
-                ? new AcmeClient(httpClient, this.acmeEndPoint, this.accountKeyPath, this.acmeEAB, this.acmeEABHmac)
-                : new AcmeClient( httpClient, this.acmeEndPoint, this.accountKeyPath);
+                ? new AcmeClient(this.acmeEndPoint, this.accountKeyPath, this.acmeEAB, this.acmeEABHmac)
+                : new AcmeClient(this.acmeEndPoint, this.accountKeyPath);
 
         using RSA domainKey = RSA.Create(2048);
         var cert = await client.CreateCertificateAsync(this.acmeEmail, domainKey, serverName, this.SaveChallengesAsync);

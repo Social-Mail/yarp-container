@@ -27,13 +27,6 @@ partial class AcmeClient
     public async Task<RequestBuilder> SignedRequest<T>(string url, T payload, CancellationToken cancellationToken, string? kid = null, string? nonce = null, bool includeExternalAccountBinding = false)
     {
 
-        // Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
-        // {
-        //     url,
-        //     kid,
-        //     includeExternalAccountBinding
-        // }));
-
         if (nonce == null)
         {
             var request = RequestBuilder.Get(_directory.NewNonce);
@@ -61,6 +54,14 @@ partial class AcmeClient
         content.Headers.ContentType.CharSet = "";
 
         return RequestBuilder.Post(url)
+            .WithLogger((req, res) =>
+            {
+                this.Log(new
+                {
+                    url= req.RequestUri?.ToString(),
+                    status = res.StatusCode
+                });
+            })
             .Content(content);
 
         JsonObject CreateSignedBody(string url, JsonObject payload, string? kid = null, string? nonce = null)
