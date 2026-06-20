@@ -212,7 +212,7 @@ public class CertificateStore
     public async Task<X509Certificate2> Create24HourCertificate(string subjectName)
     {
 
-        var certFileName = "self-signed-" + subjectName;
+        var certFileName = subjectName;
 
         var xCert = await LoadCertFromFile(certFileName);
         if(xCert != null)
@@ -246,9 +246,11 @@ public class CertificateStore
                 )
             );
 
-            // 5. Define validity period: Start now, expire in exactly 30 days
+            // 5. Define validity period: Start now, expire in exactly 6 days
+            // as we are going to use 5 day renewal period, so this will stay in cache for
+            // one hour
             DateTimeOffset notBefore = DateTimeOffset.UtcNow;
-            DateTimeOffset notAfter = notBefore.AddDays(30);
+            DateTimeOffset notAfter = notBefore.AddDays(5).AddHours(1);
 
             // 6. Create the self-signed certificate
             xCert = request.CreateSelfSigned(notBefore, notAfter);
