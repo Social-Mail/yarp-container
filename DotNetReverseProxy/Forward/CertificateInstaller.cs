@@ -69,7 +69,7 @@ public class CertificateInstaller: IMiddleware
     internal async Task<CertificateInfo> InstallCertificateAsync(string serverName)
     {
         var client = this.acmeEAB != null && this.acmeEABHmac != null
-                ? new AcmeClient(httpClient, this.acmeEndPoint, this.acmeEAB, this.acmeEABHmac)
+                ? new AcmeClient(httpClient, this.acmeEndPoint, this.accountKeyPath, this.acmeEAB, this.acmeEABHmac)
                 : new AcmeClient( httpClient, this.acmeEndPoint, this.accountKeyPath);
 
         using RSA domainKey = RSA.Create(2048);

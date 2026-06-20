@@ -41,12 +41,17 @@ public partial class AcmeClient
         LoadOrCreateAccountKey(accountKeyPath ?? throw new ArgumentNullException(nameof(accountKeyPath)));
     }
 
-    public AcmeClient(HttpClient httpClient, string directoryUrl, string externalAccountBindingKID, string externalAccountBindingHmacKey)
+    public AcmeClient(HttpClient httpClient, string directoryUrl, string accountKeyPath, string externalAccountBindingKID, string externalAccountBindingHmacKey)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _directoryUrl = directoryUrl ?? throw new ArgumentNullException(nameof(directoryUrl));
         _externalKid = externalAccountBindingKID ?? throw new ArgumentNullException(nameof(externalAccountBindingKID));
         _externalHmacKey= externalAccountBindingHmacKey ?? throw new ArgumentNullException(nameof(externalAccountBindingHmacKey));
+                // Set up default headers for ACME requests
+        SetupDefaultHeaders();
+
+        // Load existing account key or create new one
+        LoadOrCreateAccountKey(accountKeyPath ?? throw new ArgumentNullException(nameof(accountKeyPath)));
     }
 
     private void SetupDefaultHeaders()
