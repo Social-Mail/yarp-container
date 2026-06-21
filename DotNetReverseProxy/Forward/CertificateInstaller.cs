@@ -73,7 +73,7 @@ public class CertificateInstaller: IMiddleware
         using RSA domainKey = RSA.Create(2048);
         var cert = await client.CreateCertificateAsync(this.acmeEmail, domainKey, serverName, this.SaveChallengesAsync);
 
-        string privateKeyPem = domainKey.ExportRSAPrivateKeyPem();
+        string privateKeyPem = domainKey.ExportPkcs8PrivateKeyPem();
         return new CertificateInfo
         {
             Cert = cert,
