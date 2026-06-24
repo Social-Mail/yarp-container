@@ -30,7 +30,7 @@ public static class SocialMailRateLimiter
 
         var readRequestRegEx = new Regex("^(GET|HEAD|OPTIONS)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        var skipIPs = (System.Environment.GetEnvironmentVariable("NO_THROTTLE_IP_ADDRESSES") ?? "").Split(",", StringSplitOptions.RemoveEmptyEntries);
+        var skipIPs = (System.Environment.GetEnvironmentVariable("FORWARD_NO_RATE_LIMIT_IP_ADDRESSES") ?? "").Split(",", StringSplitOptions.RemoveEmptyEntries);
 
         var allowedIPs = new HashSet<string>(skipIPs.Select(ToCacheKey));
 

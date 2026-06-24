@@ -31,6 +31,8 @@ FORWARD_JSON=/app/forward.json
 # if set, it will use this when host isn't specified in forward.json
 FORWARD_HOST=0.0.0.0
 FORWARD_PORT= # can be unix path
+
+FORWARD_NO_RATE_LIMIT_IP_ADDRESSES= <-- list of IPs comma separated that will not be rate limited
 ```
 
 # forward.json
