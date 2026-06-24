@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading.RateLimiting;
 
@@ -13,8 +15,14 @@ public static class SocialMailRateLimiter
 
     public static string CacheKey(this HttpContext context)
     {
-        return $"HttpStatus_Error_{context.Connection?.RemoteIpAddress?.ToString() ?? "0.0.0.0"}";
+        return ToCacheKey(context.Connection?.RemoteIpAddress?.ToString() ?? "0.0.0.0");
     }
+
+    public static string ToCacheKey(string ipAddress)
+    {
+        return $"HttpStatus_Error_{ipAddress}";
+    }
+
 
     public static void AddSocialMailRateLimiter(this IServiceCollection services)
     {
@@ -22,11 +30,21 @@ public static class SocialMailRateLimiter
 
         var readRequestRegEx = new Regex("^(GET|HEAD|OPTIONS)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
+        var skipIPs = (System.Environment.GetEnvironmentVariable("NO_THROTTLE_IP_ADDRESSES") ?? "").Split(",", StringSplitOptions.RemoveEmptyEntries);
+
+        var allowedIPs = new HashSet<string>(skipIPs.Select(ToCacheKey));
+
         services.AddRateLimiter(rl => {
             rl.RejectionStatusCode  = StatusCodes.Status429TooManyRequests;
             rl.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
                 {
+
                     var cacheKey = httpContext.CacheKey();
+
+                    if (allowedIPs.Contains(cacheKey))
+                    {
+                        return RateLimitPartition.GetNoLimiter("bypass");
+                    }
 
                     var cache = httpContext.RequestServices.GetRequiredService<IMemoryCache>();
 
