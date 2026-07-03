@@ -54,3 +54,28 @@ FORWARD_NO_RATE_LIMIT_IP_ADDRESSES= <-- list of IPs comma separated that will no
 ```
 
 In above example, port 8001 is special port which runs a HTTP server and which will return the address where yarp should connect further. For example, if you have a multitanent cluster running on port 8001 and every host is running on different dynamically generated port. This tanent server will start the web application on demand.
+
+## IIS REMOTE_ADDR UPDATE For Entire Server
+
+Step 1: Allow the Server Variable
+1. Open IIS Manager and click on your website or root server node.
+2. Double-click URL Rewrite.
+3. In the right-hand Actions pane, click View Server Variables...
+4. Click Add... and type exactly: REMOTE_ADDR. Click OK
+
+Open your website's root `web.config` file and add the following rule inside the `<system.webServer> <rewrite> <rules>`
+
+```
+<rule name="Restore Client IP Behind Proxy" stopProcessing="false">
+    <match url=".*" />
+    <conditions>
+        <!-- Ensure the X-Forwarded-For header exists and is not empty -->
+        <add input="{HTTP_X_FORWARDED_FOR}" pattern="^$" negate="true" />
+    </conditions>
+    <serverVariables>
+        <!-- Replace the local proxy IP with the value from the header -->
+        <set name="REMOTE_ADDR" value="{HTTP_X_FORWARDED_FOR}" />
+    </serverVariables>
+    <action type="None" />
+</rule>
+```
