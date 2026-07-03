@@ -75,6 +75,7 @@ Open your website's root `web.config` file and add the following rule inside the
     <serverVariables>
         <!-- Replace the local proxy IP with the value from the header -->
         <set name="REMOTE_ADDR" value="{HTTP_X_FORWARDED_FOR}" />
+        <set variable="HTTPS" value="on" />
     </serverVariables>
     <action type="None" />
 </rule>
