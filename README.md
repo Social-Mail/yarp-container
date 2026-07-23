@@ -49,10 +49,14 @@ FORWARD_NO_RATE_LIMIT_IP_ADDRESSES= <-- list of IPs comma separated that will no
 ```
 
 # forward.json
+Forward json can contain trailing comma and comments.
 
 ```json
 {
     "host:5001": [ "host1.com", "sub-domain.host1.com", "*.xyz.com" ],
+
+    // you can alternatively specify single string with space or comma separated
+    "host:5001": "host1.com, sub-domain.host1.com, *.xyz.com",
 
     // this will use 0.0.0.0 connector or FORWARD_HOST
     "5002": [ "host2.com" ],

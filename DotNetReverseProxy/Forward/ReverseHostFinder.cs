@@ -163,25 +163,25 @@ public class ReverseHostFinder
             var endPoint = ParseEndPoint(key);
 
 
-            if(value is JsonArray array)
+            if (value is JsonValue jv)
             {
-                foreach(var item in array)
-                {
-                    var hostName = item.GetValue<string>().ToLower();
-                    ports[hostName] = Factory(endPoint);
-                }
-                continue;
-            }
-
-            if (value.GetValueKind() == JsonValueKind.String)
-            {
-                foreach(var item in value.AsValue().ToString().Split(' ',',', ';'))
+                foreach(var item in jv.ToString().Split(' ',',', ';'))
                 {
                     var h = item.Trim();
                     if(h.Length > 0)
                     {
                         ports[h] = Factory(endPoint);
                     }
+                }
+                continue;
+            }
+
+            if(value is JsonArray array)
+            {
+                foreach(var item in array)
+                {
+                    var hostName = item.GetValue<string>().ToLower();
+                    ports[hostName] = Factory(endPoint);
                 }
                 continue;
             }
