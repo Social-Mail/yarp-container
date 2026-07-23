@@ -34,6 +34,9 @@ public static class SocialMailRateLimiter
 
         var allowedIPs = new HashSet<string>(skipIPs.Select(ToCacheKey));
 
+        var maxPenaltyPerSecond = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out var n) ? n : 60;
+        
+
         services.AddRateLimiter(rl => {
             rl.RejectionStatusCode  = StatusCodes.Status429TooManyRequests;
             rl.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
@@ -41,7 +44,7 @@ public static class SocialMailRateLimiter
 
                     var cacheKey = httpContext.CacheKey();
 
-                    if (allowedIPs.Contains(cacheKey))
+                    if (allowedIPs.Contains(cacheKey) || maxPenaltyPerSecond == 0)
                     {
                         return RateLimitPartition.GetNoLimiter("bypass");
                     }
@@ -49,7 +52,7 @@ public static class SocialMailRateLimiter
                     var cache = httpContext.RequestServices.GetRequiredService<IMemoryCache>();
 
                     var errorCount = cache.Get<int?>(cacheKey) ?? 0;
-                    if (errorCount > 60)
+                    if (errorCount > maxPenaltyPerSecond)
                     {
                         Console.WriteLine($"RateLimited (Penalty): {cacheKey}");
                         return RateLimitPartition.GetTokenBucketLimiter(

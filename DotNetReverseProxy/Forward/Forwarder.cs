@@ -26,7 +26,7 @@ public class Forwarder: IMiddleware
     private readonly ReverseHostFinder hostFinder;
     private readonly JsonLogger logger;
     private readonly StripedCacheService stripedCache;
-    private readonly Regex booleanRegexCheck;
+    private readonly int defaultPenalty;
 
     public Forwarder(
         CertificateInstaller store,
@@ -40,7 +40,7 @@ public class Forwarder: IMiddleware
         this.hostFinder = hostFinder;
         this.logger = logger;
         this.stripedCache = stripedCache;
-        this.booleanRegexCheck = new Regex("yes|true", RegexOptions.Compiled |  RegexOptions.IgnoreCase);
+        this.defaultPenalty = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_ERROR_PENALTY") ?? "1", out var n) ? n : 1;
         this.client = new HttpMessageInvoker(new SocketsHttpHandler
         {
             UseProxy = false,
@@ -115,14 +115,17 @@ public class Forwarder: IMiddleware
         var error = ex?.ToString();
         if (context.Response.StatusCode >= 400)
         {
-            var skipPenalty = false;
-            if(context.Response.Headers.TryGetValue("x-no-penalty", out var p))
+            var penalty = this.defaultPenalty;
+            if(context.Response.Headers.TryGetValue("x-error-penalty", out var p))
             {
-                skipPenalty = this.booleanRegexCheck.IsMatch(p.ToString());
+                if(int.TryParse(p, out var n))
+                {
+                    penalty = n;
+                }
             }
             
-            if(!skipPenalty) {
-                stripedCache.Update<int?>(cacheKey, (x) => x + 1, 1, TrackExpiration);
+            if(penalty > 0) {
+                stripedCache.Update<int?>(cacheKey, (x) => x + penalty, penalty, TrackExpiration);
             }
             logger.LogError(new
             {

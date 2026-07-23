@@ -26,6 +26,15 @@ SELF_IPs=
 
 FORWARD_CERT_STORE=/cache/certs/ <-- local store
 
+# 60 is default if not defined, this value is per second
+# setting this value to zero will disable rate limiter
+FORWARD_MAX_ERROR_PENALTY=60
+
+# 1 is default if not defined
+# your application set `x-error-penalty` to a higher number to increase penalty
+# on hacking attempt
+FORWARD_ERROR_PENALTY=1
+
 # If set, it will be used to query host to port mapping
 FORWARD_JSON=/app/forward.json
 # if set, it will use this when host isn't specified in forward.json
