@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
@@ -25,7 +26,7 @@ public class Forwarder: IMiddleware
     private readonly ReverseHostFinder hostFinder;
     private readonly JsonLogger logger;
     private readonly StripedCacheService stripedCache;
-
+    private readonly Regex booleanRegexCheck;
 
     public Forwarder(
         CertificateInstaller store,
@@ -39,6 +40,7 @@ public class Forwarder: IMiddleware
         this.hostFinder = hostFinder;
         this.logger = logger;
         this.stripedCache = stripedCache;
+        this.booleanRegexCheck = new Regex("yes|true", RegexOptions.Compiled |  RegexOptions.IgnoreCase);
         this.client = new HttpMessageInvoker(new SocketsHttpHandler
         {
             UseProxy = false,
@@ -113,7 +115,15 @@ public class Forwarder: IMiddleware
         var error = ex?.ToString();
         if (context.Response.StatusCode >= 400)
         {
-            var v = stripedCache.Update<int?>(cacheKey, (x) => x + 1, 1, TrackExpiration);
+            var skipPenalty = false;
+            if(context.Response.Headers.TryGetValue("x-no-penalty", out var p))
+            {
+                skipPenalty = this.booleanRegexCheck.IsMatch(p.ToString());
+            }
+            
+            if(!skipPenalty) {
+                stripedCache.Update<int?>(cacheKey, (x) => x + 1, 1, TrackExpiration);
+            }
             logger.LogError(new
             {
                 status,
