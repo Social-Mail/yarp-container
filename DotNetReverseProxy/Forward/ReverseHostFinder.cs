@@ -173,6 +173,19 @@ public class ReverseHostFinder
                 continue;
             }
 
+            if (value.GetValueKind() == JsonValueKind.String)
+            {
+                foreach(var item in value.AsValue().ToString().Split(' ',',', ';'))
+                {
+                    var h = item.Trim();
+                    if(h.Length > 0)
+                    {
+                        ports[h] = Factory(endPoint);
+                    }
+                }
+                continue;
+            }
+
             forwardEndPoint = endPoint;
             
         }
