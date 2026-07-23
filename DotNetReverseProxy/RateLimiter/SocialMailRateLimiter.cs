@@ -36,11 +36,22 @@ public static class SocialMailRateLimiter
 
         var maxPenaltyPerSecond = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out var n) ? n : 60;
         
+        var noRateLimiterHeader = System.Environment.GetEnvironmentVariable("FORWARD_DISABLE_RATE_LIMITER_HEADER");
+        var noRateLimiterHeaderValue = System.Environment.GetEnvironmentVariable("FORWARD_DISABLE_RATE_LIMITER_HEADER_VALUE");
 
         services.AddRateLimiter(rl => {
             rl.RejectionStatusCode  = StatusCodes.Status429TooManyRequests;
             rl.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
                 {
+                    if(noRateLimiterHeader != null) {
+                        if(httpContext.Request.Headers.TryGetValue(noRateLimiterHeader, out var h))
+                        {
+                            if(noRateLimiterHeaderValue == h.ToString())
+                            {
+                                return RateLimitPartition.GetNoLimiter("bypass");
+                            }
+                        }
+                    }
 
                     var cacheKey = httpContext.CacheKey();
 

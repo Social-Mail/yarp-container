@@ -26,6 +26,10 @@ SELF_IPs=
 
 FORWARD_CERT_STORE=/cache/certs/ <-- local store
 
+# Use following from CDN to disable rate limiter
+FORWARD_DISABLE_RATE_LIMITER_HEADER=x-no-rate-limit
+FORWARD_DISABLE_RATE_LIMITER_HEADER_VALUE=secret-key
+
 # 60 is default if not defined, this value is per second
 # setting this value to zero will disable rate limiter
 FORWARD_MAX_ERROR_PENALTY=60
