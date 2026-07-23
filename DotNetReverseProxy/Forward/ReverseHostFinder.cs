@@ -181,7 +181,14 @@ public class ReverseHostFinder
                 foreach(var item in array)
                 {
                     var hostName = item.GetValue<string>().ToLower();
-                    ports[hostName] = Factory(endPoint);
+                    foreach(var h in hostName.Split(' ',',',';'))
+                    {
+                        var ht = h.Trim();
+                        if (ht.Length > 0)
+                        {
+                            ports[ht] = Factory(endPoint);        
+                        }
+                    }
                 }
                 continue;
             }
