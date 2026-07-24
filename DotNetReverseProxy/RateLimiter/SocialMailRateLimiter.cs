@@ -38,7 +38,7 @@ public static class SocialMailRateLimiter
 
         var skipIPs = (System.Environment.GetEnvironmentVariable("FORWARD_NO_RATE_LIMIT_IP_ADDRESSES") ?? "")
             .Split(",", StringSplitOptions.RemoveEmptyEntries)
-            .Select(ToCacheKey);
+            .Select((x) => ToCacheKey(x.Trim()));
 
         var allowedIPs = new HashSet<string>(skipIPs.Concat(skipIPs));
 
