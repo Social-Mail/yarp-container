@@ -16,19 +16,21 @@ public class ReverseHostFinder
 {
     private readonly string Host;
     private readonly Dictionary<string, Func<CancellationToken,ValueTask<Stream>>> ports = new ();
-    private readonly Func<CancellationToken,ValueTask<Stream>> defaultEndPoint;
+    private readonly Func<CancellationToken,ValueTask<Stream>>? defaultEndPoint;
     private readonly JsonLogger logger;
     private EndPointHttpClient? forwardClient;
 
     public ReverseHostFinder(JsonLogger logger)
     {
         this.Host = System.Environment.GetEnvironmentVariable("FORWARD_HOST") ?? "0.0.0.0";
-        var key = System.Environment.GetEnvironmentVariable("FORWARD_PORT") ?? "8080";
-        this.defaultEndPoint = Factory(ParseEndPoint(key));
+        var key = System.Environment.GetEnvironmentVariable("FORWARD_PORT");
+        if(key != null) {
+            this.defaultEndPoint = Factory(ParseEndPoint(key));
+        }
         this.logger = logger;
     }
 
-    public Func<CancellationToken,ValueTask<Stream>> GetPort(string hostName)
+    public Func<CancellationToken,ValueTask<Stream>>? GetPort(string hostName)
     {
         // for the case when cluster might support multiple virtual servers
         // this can query host
@@ -241,6 +243,6 @@ public class ReverseHostFinder
     {
         var host = context.InitialRequestMessage.Headers.Host ?? "localhost";
         var factory = GetPort(host);
-        return factory(token);
+        return factory!(token);
     }
 }

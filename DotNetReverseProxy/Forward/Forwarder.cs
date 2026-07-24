@@ -68,6 +68,18 @@ public class Forwarder: IMiddleware
 
         var start = DateTime.UtcNow;
 
+        var p = hostFinder.GetPort(request.Headers.Host!);
+        if(p == null)
+        {
+            var response = httpContext.Response;
+            RegisterStatus(httpContext, DateTime.UtcNow - start, null);
+            response.StatusCode = 404;
+            await response.WriteAsync("Host Not Found");
+            await response.CompleteAsync();
+            return;
+        }
+
+
         var error = await forwarder.SendAsync(httpContext, "http://" + request.Headers.Host, client, requestOptions,
             (context, proxyRequest) =>
             {
