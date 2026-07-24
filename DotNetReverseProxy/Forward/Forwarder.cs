@@ -57,10 +57,18 @@ public class Forwarder: IMiddleware
 
     public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
     {
+        var request = httpContext.Request;
+        if (!request.IsHttps)
+        {
+            // send redirect...
+            var url = httpContext.Request.GetDisplayUrl();
+            httpContext.Response.Redirect(url.Replace("http://", "https://"));
+            return;
+        }
 
         var start = DateTime.UtcNow;
 
-        var error = await forwarder.SendAsync(httpContext, "http://" + httpContext.Request.Headers.Host, client, requestOptions,
+        var error = await forwarder.SendAsync(httpContext, "http://" + request.Headers.Host, client, requestOptions,
             (context, proxyRequest) =>
             {
                 var responseHeaders = context.Response.Headers;
