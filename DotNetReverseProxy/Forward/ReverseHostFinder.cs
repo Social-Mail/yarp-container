@@ -66,6 +66,10 @@ public class ReverseHostFinder
         {
             return (c) => UnixSocketFactory(unixPath, c);
         }
+        if (endPoint is IPEndPoint ipEndPoint)
+        {
+            return (c) => IPSocketFactory(ipEndPoint, c);
+        }
         return (c) => SocketFactory((endPoint as DnsEndPoint)!, c);
     }
 
@@ -87,6 +91,21 @@ public class ReverseHostFinder
                 details = ex.ToString()
             });
             throw;
+        } finally
+        {
+            disposable?.Dispose();
+        }
+    }
+
+    private async ValueTask<Stream> IPSocketFactory(IPEndPoint endPoint, CancellationToken cancellationToken)
+    {
+        IDisposable? disposable = null;
+        try {
+            var socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            disposable = socket;
+            await socket.ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
+            disposable = null;
+            return new NetworkStream(socket, true);
         } finally
         {
             disposable?.Dispose();
@@ -139,6 +158,10 @@ public class ReverseHostFinder
         else
         {
             port = 80;
+        }
+        if(IPAddress.TryParse(host, out var ip))
+        {
+            return new IPEndPoint(ip, port);
         }
         return new DnsEndPoint(host, port);
     }
