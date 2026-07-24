@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 
 namespace DotNetReverseProxy;
@@ -17,7 +18,8 @@ public class JsonLogger {
             IncludeFields = true,
             IndentCharacter = '\t',
             IndentSize = 1,
-            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+            Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
         };
         this.error = Console.Error;
         this.console = Console.Out;
