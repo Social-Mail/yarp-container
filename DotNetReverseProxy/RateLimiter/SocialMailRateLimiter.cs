@@ -48,6 +48,7 @@ public static class SocialMailRateLimiter
                         {
                             if(noRateLimiterHeaderValue == h.ToString())
                             {
+                                httpContext.Items.TryAdd("no-rate-limit", "yes");
                                 return RateLimitPartition.GetNoLimiter("bypass");
                             }
                         }
@@ -57,6 +58,7 @@ public static class SocialMailRateLimiter
 
                     if (allowedIPs.Contains(cacheKey) || maxPenaltyPerSecond == 0)
                     {
+                        httpContext.Items.TryAdd("no-rate-limit", "yes");
                         return RateLimitPartition.GetNoLimiter("bypass");
                     }
 

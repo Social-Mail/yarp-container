@@ -113,7 +113,7 @@ public class Forwarder: IMiddleware
         var duration = ts.TotalMilliseconds.ToString("0.##", CultureInfo.InvariantCulture) + "ms";
         var time = DateTime.UtcNow;
         var error = ex?.ToString();
-        if (context.Response.StatusCode >= 400)
+        if (status >= 400 && !context.Items.ContainsKey("no-rate-limit"))
         {
             var penalty = this.defaultPenalty;
             if(context.Response.Headers.TryGetValue("x-error-penalty", out var p))
@@ -125,6 +125,12 @@ public class Forwarder: IMiddleware
             }
             
             if(penalty > 0) {
+                // double penalty for 404 if penalty is 1
+                if (penalty == 1 && status == 404)
+                {
+                    penalty = 2;
+
+                }
                 stripedCache.Update<int?>(cacheKey, (x) => x + penalty, penalty, TrackExpiration);
             }
             logger.LogError(new
