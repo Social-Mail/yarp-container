@@ -78,6 +78,15 @@ public class ReverseHostFinder
             await socket.ConnectAsync(unixPort, cancellationToken).ConfigureAwait(false);
             disposable = null;
             return new NetworkStream(socket, true);
+        } catch(Exception ex)
+        {
+            logger.Log(new
+            {
+                action = "failed",
+                url = unixPort.ToString(),
+                details = ex
+            });
+            throw;
         } finally
         {
             disposable?.Dispose();
