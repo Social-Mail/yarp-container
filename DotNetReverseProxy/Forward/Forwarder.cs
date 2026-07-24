@@ -165,15 +165,20 @@ public class Forwarder: IMiddleware
         }
         else
         {
-            logger.LogError(new
+
+            // we will only track longer requests...
+            if (ts.TotalSeconds > 5)
             {
-                status,
-                userAgent,
-                url = request.GetDisplayUrl(),
-                ip = context.Connection.RemoteIpAddress?.ToString(),
-                error,
-                duration
-            });
+                logger.LogError(new
+                {
+                    status,
+                    userAgent,
+                    url = request.GetDisplayUrl(),
+                    ip = context.Connection.RemoteIpAddress?.ToString(),
+                    error,
+                    duration
+                });
+            }
 
             var currentCount = stripedCache.Get<int?>(cacheKey);
             if (currentCount == null)
