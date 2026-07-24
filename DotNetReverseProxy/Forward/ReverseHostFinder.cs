@@ -84,7 +84,7 @@ public class ReverseHostFinder
             {
                 action = "failed",
                 url = unixPort.ToString(),
-                details = ex
+                details = ex.ToString()
             });
             throw;
         } finally
