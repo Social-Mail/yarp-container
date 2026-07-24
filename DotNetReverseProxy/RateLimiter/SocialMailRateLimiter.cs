@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.RateLimiting;
 
@@ -30,9 +31,18 @@ public static class SocialMailRateLimiter
 
         var readRequestRegEx = new Regex("^(GET|HEAD|OPTIONS)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        var skipIPs = (System.Environment.GetEnvironmentVariable("FORWARD_NO_RATE_LIMIT_IP_ADDRESSES") ?? "").Split(",", StringSplitOptions.RemoveEmptyEntries);
+        var selfIPs = (System.Environment.GetEnvironmentVariable("SELF_IPs") ?? "0.0.0.0")
+                .Split(",", StringSplitOptions.RemoveEmptyEntries)
+                .Select((x) => ToCacheKey(x.Trim()));
 
-        var allowedIPs = new HashSet<string>(skipIPs.Select(ToCacheKey));
+
+        var skipIPs = (System.Environment.GetEnvironmentVariable("FORWARD_NO_RATE_LIMIT_IP_ADDRESSES") ?? "")
+            .Split(",", StringSplitOptions.RemoveEmptyEntries)
+            .Select(ToCacheKey);
+
+        var allowedIPs = new HashSet<string>(skipIPs.Concat(skipIPs));
+
+
 
         var maxPenaltyPerSecond = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out var n) ? n : 60;
         
