@@ -64,11 +64,15 @@ try
                 var ctx = tlsCache.GetOrCreate(cert.Thumbprint, (ci) =>
                 {
 
-                    ci.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
+                    ci.SlidingExpiration = TimeSpan.FromMinutes(15);
+                    ci.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(60);
+
+                    var certContext = SslStreamCertificateContext.Create(cert, additionalCertificates: null);
+
 
                     return new SslServerAuthenticationOptions
                     {
-                        ServerCertificate = cert,
+                        ServerCertificateContext = certContext, 
                         AllowTlsResume = true,
                         ApplicationProtocols = new List<SslApplicationProtocol> {
                             SslApplicationProtocol.Http11,
