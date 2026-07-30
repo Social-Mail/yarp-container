@@ -113,10 +113,6 @@ public class Forwarder: IMiddleware
             if (errorFeature != null)
             {
                 exception = errorFeature.Exception;
-                if (exception is TaskCanceledException ||  exception is OperationCanceledException)
-                {
-                    exception = null;
-                }
                 // no need to log as RegisterStatus will report the error
                 //if (exception != null)
                 //{
@@ -134,13 +130,19 @@ public class Forwarder: IMiddleware
         var response = context.Response;
         var status = response.StatusCode;
         var userAgent = request.Headers.UserAgent.ToString();
-        var duration = ts.TotalMilliseconds.ToString("0.##", CultureInfo.InvariantCulture) + "ms";
         var time = DateTime.UtcNow;
         var error = ex?.ToString();
+
+        var cancelled = ex is TaskCanceledException || ex is OperationCanceledException;
+        if (cancelled)
+        {
+            return;
+        }
+
         if (status >= 400 && !context.Items.ContainsKey("no-rate-limit"))
         {
             var penalty = this.defaultPenalty;
-            if(context.Response.Headers.TryGetValue("x-error-penalty", out var p))
+            if(response.Headers.TryGetValue("x-error-penalty", out var p))
             {
                 if(int.TryParse(p, out var n))
                 {
@@ -157,6 +159,8 @@ public class Forwarder: IMiddleware
                 }
                 stripedCache.Update<int?>(cacheKey, (x) => x + penalty, penalty, TrackExpiration);
             }
+
+            var duration = ts.TotalMilliseconds.ToString("0.##", CultureInfo.InvariantCulture) + "ms";
             logger.LogError(new
             {
                 status,
@@ -173,6 +177,7 @@ public class Forwarder: IMiddleware
             // we will only track longer requests...
             if (ts.TotalSeconds > 5)
             {
+                var duration = ts.TotalMilliseconds.ToString("0.##", CultureInfo.InvariantCulture) + "ms";
                 logger.LogError(new
                 {
                     status,
