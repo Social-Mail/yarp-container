@@ -113,10 +113,14 @@ public class Forwarder: IMiddleware
             if (errorFeature != null)
             {
                 exception = errorFeature.Exception;
-                if (exception != null)
+                if (exception is TaskCanceledException ||  exception is OperationCanceledException)
                 {
-                    Console.WriteLine(exception.ToString());
+                    exception = null;
                 }
+                // no need to log as RegisterStatus will report the error
+                //if (exception != null)
+                //{
+                //}
             }
         }
 
