@@ -125,6 +125,12 @@ public class Forwarder: IMiddleware
 
     void RegisterStatus(HttpContext context, TimeSpan ts, Exception? ex)
     {
+        var cancelled = ex is TaskCanceledException || ex is OperationCanceledException;
+        if (cancelled)
+        {
+            return;
+        }
+
         var cacheKey = context.CacheKey();
         var request = context.Request;
         var response = context.Response;
@@ -132,12 +138,6 @@ public class Forwarder: IMiddleware
         var userAgent = request.Headers.UserAgent.ToString();
         var time = DateTime.UtcNow;
         var error = ex?.ToString();
-
-        var cancelled = ex is TaskCanceledException || ex is OperationCanceledException;
-        if (cancelled)
-        {
-            return;
-        }
 
         if (status >= 400 && !context.Items.ContainsKey("no-rate-limit"))
         {
