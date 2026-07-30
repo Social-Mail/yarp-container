@@ -51,6 +51,10 @@ public static class SocialMailRateLimiter
 
         services.AddRateLimiter(rl => {
             rl.RejectionStatusCode  = StatusCodes.Status429TooManyRequests;
+            rl.OnRejected = (rc, c) => {
+                rc.HttpContext.Response.Headers.ContentType = "text/plain";
+                return new System.Threading.Tasks.ValueTask(rc.HttpContext.Response.WriteAsync("Too many bad requests from your computer, please try after 15 minutes"));
+            };
             rl.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
                 {
                     if(noRateLimiterHeader != null) {
