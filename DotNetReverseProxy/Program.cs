@@ -54,6 +54,7 @@ try
     builder.WebHost.ConfigureKestrel(kestrel =>
     {
 
+        kestrel.Limits.MaxRequestBodySize = 73400320;
         var store = kestrel.ApplicationServices.GetRequiredService<CertificateStore>();
 
         var tls = new TlsHandshakeCallbackOptions
