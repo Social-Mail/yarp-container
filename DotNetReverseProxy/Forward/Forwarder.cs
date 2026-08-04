@@ -36,7 +36,9 @@ public class Forwarder: IMiddleware
         StripedCacheService stripedCache)
     {
         this.forwarder = forwarder;
-        this.requestOptions = new ForwarderRequestConfig { ActivityTimeout = TimeSpan.FromSeconds(100) };
+        this.requestOptions = new ForwarderRequestConfig {
+            ActivityTimeout = TimeSpan.FromSeconds(180)
+        };
         this.hostFinder = hostFinder;
         this.logger = logger;
         this.stripedCache = stripedCache;
