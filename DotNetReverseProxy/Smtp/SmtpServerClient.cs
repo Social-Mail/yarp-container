@@ -25,6 +25,7 @@ public class SmtpServerClient : IDisposable
     private string clientHostName = "";
     private TcpClient? client;
     private Stream? stream;
+    private AsyncSocketReader reader;
     private readonly JsonLogger logger;
     private readonly CertificateStore certificateStore;
     private readonly IMemoryCache cache;
@@ -63,7 +64,7 @@ public class SmtpServerClient : IDisposable
         {
             while (this.shouldContinue)
             {
-                var line = await this.ReadLineAsync();
+                var line = await reader.ReadLineAsync();
 
                 if (line == null)
                 {
@@ -132,8 +133,27 @@ public class SmtpServerClient : IDisposable
         var file = Path.GetTempFileName();
         for(; ;)
         {
-            var line = await ReadLineAsync();
-            if(line.EndsWith(".\r")) { }
+            var line = await reader.ReadLineAsync();
+            if(line.EndsWith("\r"))
+            {
+                var next = await reader.ReadLineAsync();
+                if(next.EndsWith(".\r"))
+                {
+                    // we have reached the end
+                    break;
+                }
+                // remove first dot
+                if(line.StartsWith("."))
+                {
+                    await System.IO.File.AppendAllTextAsync(file, line.Substring(1));
+                } else
+                {
+                    await System.IO.File.AppendAllTextAsync(file, line);
+                }
+                await System.IO.File.AppendAllTextAsync(file, next);
+                continue;
+            }
+            await System.IO.File.AppendAllTextAsync(file, line);
         }
         await this.WriteLineAsync("250 2.0.0 OK");
 
@@ -195,7 +215,7 @@ public class SmtpServerClient : IDisposable
     {
         for(; ;)
         {
-            var line = await ReadLineAsync();
+            var line = await reader.ReadLineAsync();
             if (string.IsNullOrEmpty(line))
             {
                 throw new InvalidOperationException($"Socket sent an empty line");
@@ -253,6 +273,7 @@ public class SmtpServerClient : IDisposable
         await s.AuthenticateAsServerAsync(secureContext!);
 
         this.stream = s;
+        this.reader = new AsyncSocketReader(s);
     }
 
     private async Task WriteLineAsync(string v)
@@ -261,15 +282,11 @@ public class SmtpServerClient : IDisposable
         await this.stream!.WriteAsync(buf);
     }
 
-    private async Task ReadLineAsync()
-    {
-
-    }
-
     private async Task ResolveRemoteIP(TcpClient client)
     {
         this.client = client;
         this.stream = client.GetStream();
+        this.reader = new AsyncSocketReader(this.stream);
         if (client.Client.RemoteEndPoint is IPEndPoint ip)
         {
             this.remoteAddress = ip.Address.ToString().Replace("::ffff:", "");
