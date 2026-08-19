@@ -1,5 +1,6 @@
 ﻿using DotNetReverseProxy;
 using DotNetReverseProxy.Forward;
+using DotNetReverseProxy.Smtp;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -103,6 +104,7 @@ try
 
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
+    builder.Services.AddSmtpServer();
     builder.Services.AddSingleton<JsonLogger>();
     builder.Services.AddSingleton<CertificateStore>();
     builder.Services.AddSingleton<CertificateInstaller>();
@@ -133,6 +135,9 @@ try
     await rhf.InitAsync();
 
     app.UseMiddleware<Forwarder>();
+
+    var s = app.Services.GetRequiredService<SmtpServer>();
+    s.Start();
 
     app.Run();
 
