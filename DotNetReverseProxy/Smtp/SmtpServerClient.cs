@@ -16,11 +16,13 @@ public class SmtpServerClient : IDisposable
     public SmtpServerClient(
         JsonLogger logger,
         CertificateStore certificateStore,
+        SpfVerificationService spfVerificationService,
         IMemoryCache cache,
         ISmtpReceiver smtpReceiver)
     {
         this.logger = logger;
         this.certificateStore = certificateStore;
+        this.spfVerificationService = spfVerificationService;
         this.cache = cache;
         this.smtpReceiver = smtpReceiver;
         this.host = System.Environment.GetEnvironmentVariable("SMTP_HOST");
@@ -33,6 +35,7 @@ public class SmtpServerClient : IDisposable
     private AsyncSocketReader reader;
     private readonly JsonLogger logger;
     private readonly CertificateStore certificateStore;
+    private readonly SpfVerificationService spfVerificationService;
     private readonly IMemoryCache cache;
     private readonly ISmtpReceiver smtpReceiver;
     private readonly string? host;
@@ -206,6 +209,14 @@ public class SmtpServerClient : IDisposable
             return;
         }
         this.from = SmtpParser.ParseAddress(arg);
+
+        // verify SPF first...
+        await spfVerificationService.VerifyAsync(
+            this.from,
+            this.remoteAddress,
+            this.hostNameAppearsAs,
+            this.clientHostName);
+
         await smtpReceiver.MailFromAsync(this, arg);
         await this.WriteLineAsync("250 2.1.5 OK");
     }

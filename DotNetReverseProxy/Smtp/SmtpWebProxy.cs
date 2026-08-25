@@ -5,6 +5,12 @@ namespace DotNetReverseProxy.Smtp;
 
 public class SmtpWebProxy : ISmtpReceiver
 {
+
+    public SmtpWebProxy()
+    {
+        
+    }
+
     public Task DataAsync(SmtpServerClient client, string from, List<string> to, string file)
     {
         throw new System.NotImplementedException();

@@ -1,8 +1,8 @@
 using DotNetReverseProxy.Smtp;
 
-namespace DotNetReverseProxy.Tests;
+namespace DotNetReverseProxy.Tests.Smtp;
 
-public class UnitTest1
+public class SmtpUnitTests
 {
     [Fact]
     public async Task ReadLineAsync()
