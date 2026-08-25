@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -16,9 +17,54 @@ public class AsyncSocketReader
         this.stream = stream;
     }
 
+    public async Task<string> ReadTillLineFeedAsync()
+    {
+        Memory<byte> lineBuffer = new();
+        while (true)
+        {
+            if (this.peek == null)
+            {
+                var next = await this.Next();
+                this.SetPeek(next);
+            }
+
+            var peek = this.peek!.Value;
+
+            var index = peek.Span.IndexOf((byte)10);
+            if (index == -1)
+            {
+                lineBuffer = !lineBuffer.IsEmpty
+                    ? lineBuffer.Add(peek.Slice(0, index))
+                    : peek.Slice(0, index)
+                    ;
+                this.ClearPeek();
+                continue;
+            }
+
+            // ended by \r\n
+            if ((index + 1) == peek.Length)
+            {
+                this.ClearPeek();
+                lineBuffer = !lineBuffer.IsEmpty
+                    ? lineBuffer.Add(peek.Slice(0, index))
+                    : peek.Slice(0, index);
+            }
+            else
+            {
+                lineBuffer = !lineBuffer.IsEmpty
+                    ? lineBuffer.Add(peek.Slice(0, index))
+                    : peek.Slice(0, index);
+                this.SetPeek(peek.Slice(index + 1));
+            }
+            break;
+        }
+        return System.Text.Encoding.ASCII.GetString(lineBuffer.Span);
+    }
+
+
     public async Task<string> ReadLineAsync()
     {
-        Memory<byte> lineBuffer = new Memory<byte>();
+        Memory<byte> lineBuffer = new();
         while (true)
         {
             if(this.peek == null)
@@ -30,10 +76,16 @@ public class AsyncSocketReader
             var peek = this.peek!.Value;
 
             // lets handle broken new line first...
-            if(lineBuffer.Length > 0 && lineBuffer.Span[lineBuffer.Length-1] == '\r' && peek.Span[0] == '\n')
+            if(lineBuffer.Length > 0 && lineBuffer.Span[lineBuffer.Length-1] == 13 && peek.Span[0] == 10)
             {
-                this.SetPeek(peek.Length == 1 ? null : peek[1..]);
-                return System.Text.Encoding.ASCII.GetString(lineBuffer.Span);
+                if(peek.Length ==1)
+                {
+                    this.ClearPeek();
+                } else
+                {
+                    this.SetPeek(peek.Slice(1));
+                }
+                return System.Text.Encoding.ASCII.GetString(lineBuffer.Slice(0, lineBuffer.Length-1).Span);
             }
 
             var index = peek.Span.IndexOf(sep.Span);
@@ -43,14 +95,14 @@ public class AsyncSocketReader
                     ? lineBuffer.Add(peek.Slice(0, index))
                     : peek.Slice(0,index)
                     ;
-                this.SetPeek(new Memory<byte> { });
+                this.ClearPeek();
                 continue;
             }
 
             // ended by \r\n
-            if((index + sep.Length) == peek.Length)
+            if((index + 2) == peek.Length)
             {
-                this.SetPeek(null);
+                this.ClearPeek();
                 lineBuffer = !lineBuffer.IsEmpty
                     ? lineBuffer.Add(peek.Slice(0, index))
                     : peek.Slice(0, index);
@@ -59,16 +111,21 @@ public class AsyncSocketReader
                 lineBuffer = !lineBuffer.IsEmpty
                     ? lineBuffer.Add(peek.Slice(0, index))
                     : peek.Slice(0, index);
-                this.SetPeek(peek.Slice(index+ sep.Length));
+                this.SetPeek(peek.Slice(index+ 2));
             }
             break;
         }
         return System.Text.Encoding.ASCII.GetString(lineBuffer.Span);
     }
 
-    private void SetPeek(Memory<byte>? next)
+    private void ClearPeek()
     {
-        if(next?.Length == 0)
+        this.peek = null;
+    }
+
+    private void SetPeek(Memory<byte> next)
+    {
+        if(next.Length == 0)
         {
             this.peek = null;
             return;
@@ -91,11 +148,14 @@ public class AsyncSocketReader
 
 static class MemoryExtensions
 {
-    public static Memory<T> Add<T>(this Memory<T> memory, Memory<T> a1)
+    public static Memory<T> Add<T>(this Memory<T> first, Memory<T> second)
     {
-        var b = new T[memory.Length +  a1.Length];
-        memory.CopyTo(b);
-        a1.CopyTo(b.AsMemory(memory.Length));
-        return b.AsMemory();
+        T[] result = new T[first.Length + second.Length];
+
+        // 2. Copy the elements out using Spans
+        first.Span.CopyTo(result.AsSpan());
+        second.Span.CopyTo(result.AsSpan(first.Length));
+
+        return result.AsMemory();
     }
 }

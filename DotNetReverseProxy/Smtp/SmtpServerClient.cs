@@ -133,10 +133,10 @@ public class SmtpServerClient : IDisposable
         var file = Path.GetTempFileName();
         for(; ;)
         {
-            var line = await reader.ReadLineAsync();
+            var line = await reader.ReadTillLineFeedAsync();
             if(line.EndsWith("\r"))
             {
-                var next = await reader.ReadLineAsync();
+                var next = await reader.ReadTillLineFeedAsync();
                 if(next.EndsWith(".\r"))
                 {
                     // we have reached the end
@@ -145,12 +145,12 @@ public class SmtpServerClient : IDisposable
                 // remove first dot
                 if(line.StartsWith("."))
                 {
-                    await System.IO.File.AppendAllTextAsync(file, line.Substring(1));
+                    await System.IO.File.AppendAllTextAsync(file, line.Substring(1, line.Length-1));
                 } else
                 {
-                    await System.IO.File.AppendAllTextAsync(file, line);
+                    await System.IO.File.AppendAllTextAsync(file, line.Substring(0, line.Length-1));
                 }
-                await System.IO.File.AppendAllTextAsync(file, next);
+                await System.IO.File.AppendAllTextAsync(file, next.Substring(0, line.Length-1));
                 continue;
             }
             await System.IO.File.AppendAllTextAsync(file, line);
