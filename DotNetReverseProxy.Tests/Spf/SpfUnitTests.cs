@@ -1,4 +1,6 @@
-﻿using DotNetReverseProxy.Smtp;
+﻿using Amazon.Runtime.Credentials.Internal;
+using DnsClientX;
+using DotNetReverseProxy.Smtp;
 using DotNetReverseProxy.Spf;
 using System;
 using System.Collections.Generic;
@@ -30,5 +32,19 @@ public class SpfUnitTests
 
     }
 
+    [Fact]
+    public async Task Resolve()
+    {
+        var spf = await SpfValidator.Fetch("neurospeech.com");
+
+        await foreach(var ip in DnsResolver.ResolveAsync("ns-mailer.neurospeech.com", DnsRecordType.A))
+        {
+            if(spf.IPRanges.Any((r) => r.IPv4 == ip))
+            {
+                return;
+            }
+        }
+        Assert.Fail();
+    }
 
 }

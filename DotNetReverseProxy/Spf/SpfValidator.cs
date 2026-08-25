@@ -1,5 +1,7 @@
 ﻿using DnsClientX;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Hosting;
+using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,7 +15,7 @@ public class SpfValidator
 
     public string Domain { get; set; }
 
-    public SpfAddress[] mechanisms { get; set; }
+    public SpfAddress[] IPRanges { get; set; }
 
     public SpfValidator()
     {
@@ -29,18 +31,14 @@ public class SpfValidator
     {
         var list = new List<SpfAddress>();
         await ResolveDomainAsync(this.Domain, list);
-
+        this.IPRanges = list.ToArray();
     }
 
     private async Task ResolveDomainAsync(string domain, List<SpfAddress> list)
     {
-        var host = await ClientX.QueryDns(domain, DnsRecordType.TXT, DnsEndpoint.Cloudflare);
-
-        List<(IPAddress start, IPAddress end)> ipList = new List<(IPAddress start, IPAddress end)>();
-
-        foreach (var a in host.Answers)
+        await foreach (var a in DnsResolver.ResolveAsync(domain, DnsRecordType.TXT))
         {
-            var parsed = SpfParser.Parse(a.Data);
+            var parsed = SpfParser.Parse(a);
             if (parsed != null)
             {
                 var tasks = new List<Task>();
@@ -61,8 +59,25 @@ public class SpfValidator
         switch(m.Type)
         {
             case "ip4":
+                list.Add(new SpfAddress { IPv4 = m.Value, Prefix = m.Suffix });
+                break;
             case "ip6":
-
+                list.Add(new SpfAddress { IPv6 = m.Value, Prefix = m.Suffix });
+                break;
+            case "a":
+                await foreach (var a in DnsResolver.ResolveAsync(m.Value ?? this.Domain, DnsRecordType.A))
+                {
+                    list.Add(a.Contains(":") ? new SpfAddress { IPv6 = a, Prefix = m.Suffix } : new SpfAddress { IPv4 = a, Prefix = m.Suffix });
+                }
+                break;
+            case "include":
+                await this.ResolveDomainAsync(m.Value, list);
+                break;
+            case "mx":
+                await foreach(var a in DnsResolver.ResolveAsync(m.Value ?? this.Domain, DnsRecordType.MX)) {
+                    list.Add(a.Contains(":") ? new SpfAddress { IPv6 = a, Prefix = m.Suffix }:  new SpfAddress {  IPv4 = a, Prefix = m.Suffix });
+                }
+                break;
         }
     }
 
@@ -78,9 +93,9 @@ public class SpfValidator
 
 public class SpfAddress
 {
-    public string IPv4 { get; set; }
+    public string? IPv4 { get; set; }
 
-    public string IPv6 { get; set; }
+    public string? IPv6 { get; set; }
 
-    public string Prefix { get; set; }
+    public string? Prefix { get; set; }
 }
