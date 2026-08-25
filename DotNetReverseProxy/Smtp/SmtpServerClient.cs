@@ -13,11 +13,16 @@ namespace DotNetReverseProxy.Smtp;
 public class SmtpServerClient : IDisposable
 {
 
-    public SmtpServerClient(JsonLogger logger, CertificateStore certificateStore, IMemoryCache cache)
+    public SmtpServerClient(
+        JsonLogger logger,
+        CertificateStore certificateStore,
+        IMemoryCache cache,
+        ISmtpReceiver smtpReceiver)
     {
         this.logger = logger;
         this.certificateStore = certificateStore;
         this.cache = cache;
+        this.smtpReceiver = smtpReceiver;
         this.host = System.Environment.GetEnvironmentVariable("SMTP_HOST");
     }
 
@@ -29,6 +34,7 @@ public class SmtpServerClient : IDisposable
     private readonly JsonLogger logger;
     private readonly CertificateStore certificateStore;
     private readonly IMemoryCache cache;
+    private readonly ISmtpReceiver smtpReceiver;
     private readonly string? host;
     private bool secure;
     private bool shouldContinue;
@@ -155,6 +161,9 @@ public class SmtpServerClient : IDisposable
             }
             await System.IO.File.AppendAllTextAsync(file, line);
         }
+
+        await smtpReceiver.DataAsync(this, this.from, this.to, file);
+
         await this.WriteLineAsync("250 2.0.0 OK");
 
         this.from = null;
@@ -197,6 +206,7 @@ public class SmtpServerClient : IDisposable
             return;
         }
         this.from = SmtpParser.ParseAddress(arg);
+        await smtpReceiver.MailFromAsync(this, arg);
         await this.WriteLineAsync("250 2.1.5 OK");
     }
 
@@ -207,7 +217,9 @@ public class SmtpServerClient : IDisposable
             await this.WriteLineAsync("501 Syntax Error");
             return;
         }
-        (this.to ??= new List<string>()).Add(SmtpParser.ParseAddress(arg));
+        arg = SmtpParser.ParseAddress(arg);
+        (this.to ??= new List<string>()).Add(arg);
+        await smtpReceiver.RcptToAsync(this, arg);
         await this.WriteLineAsync("250 2.1.5 OK");
     }
 
