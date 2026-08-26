@@ -81,7 +81,7 @@ public class SpfValidator
             case "a":
                 await foreach (var a in DnsResolver.ResolveAsync(m.Value ?? this.Domain, DnsRecordType.A))
                 {
-                    list.Add(a.Contains(":") ? new SpfAddress { IPv6 = a, Prefix = m.Suffix } : new SpfAddress { IPv4 = a, Prefix = m.Suffix });
+                    list.Add(SpfAddress.From(a, m.Suffix));
                 }
                 break;
             case "include":
@@ -89,7 +89,7 @@ public class SpfValidator
                 break;
             case "mx":
                 await foreach(var a in DnsResolver.ResolveAsync(m.Value ?? this.Domain, DnsRecordType.MX)) {
-                    list.Add(a.Contains(":") ? new SpfAddress { IPv6 = a, Prefix = m.Suffix }:  new SpfAddress {  IPv4 = a, Prefix = m.Suffix });
+                    list.Add(SpfAddress.From(a, m.Suffix));
                 }
                 break;
         }
@@ -99,7 +99,7 @@ public class SpfValidator
     {
         var spf = new SpfValidator(domainName);
         await spf.ResolveAsync();
-        if(!spf.IPRanges.Any())
+        if(spf.IPRanges.Length == 0)
         {
             return null;
         }
@@ -107,22 +107,4 @@ public class SpfValidator
     }
 
 
-}
-
-public class SpfAddress
-{
-    public string? IPv4 { get; set; }
-
-    public string? IPv6 { get; set; }
-
-    public string? Prefix { get; set; }
-
-    public IPNetwork ToNetwork()
-    {
-        if (IPv4 != null)
-        {
-            return IPNetwork.Parse(IPv4 + "/" + Prefix ?? "32");
-        }
-        return IPNetwork.Parse(IPv4 + "/" + Prefix ?? "128");
-    }
 }

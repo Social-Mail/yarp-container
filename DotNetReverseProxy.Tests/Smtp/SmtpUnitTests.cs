@@ -38,19 +38,19 @@ public class SmtpUnitTests
     }
 
 
-    [Fact]
-    public async Task ReadTillLineFeedAsync()
-    {
-        MemoryStream ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("EHLO a\r\nMAIL FROM:<a@a.com>\nc\r\n"));
+    //[Fact]
+    //public async Task ReadTillLineFeedAsync()
+    //{
+    //    MemoryStream ms = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("EHLO a\r\nMAIL FROM:<a@a.com>\nc\r\n"));
 
-        var asr = new AsyncSocketReader(ms);
+    //    var asr = new AsyncSocketReader(ms);
 
-        var line = await asr.ReadTillLineFeedAsync();
+    //    var line = await asr.ReadTillLineFeedAsync();
 
-        Assert.Equal("EHLO a\r", line);
+    //    Assert.Equal("EHLO a\r", line);
 
-        line = await asr.ReadTillLineFeedAsync();
+    //    line = await asr.ReadTillLineFeedAsync();
 
-        Assert.Equal("MAIL FROM:<a@a.com>", line);
-    }
+    //    Assert.Equal("MAIL FROM:<a@a.com>", line);
+    //}
 }

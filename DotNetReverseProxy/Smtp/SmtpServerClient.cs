@@ -146,7 +146,7 @@ public class SmtpServerClient : IDisposable
         for(; ;)
         {
             var line = await reader.ReadLineAsync();
-            if(line.StartsWith(".")) 
+            if(line.StartsWith('.')) 
             {
                 if(line.Length == 1)
                 {

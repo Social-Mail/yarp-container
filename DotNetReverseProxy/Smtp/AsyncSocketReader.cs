@@ -17,51 +17,6 @@ public class AsyncSocketReader
         this.stream = stream;
     }
 
-    public async Task<string> ReadTillLineFeedAsync()
-    {
-        Memory<byte> lineBuffer = new();
-        while (true)
-        {
-            if (this.peek == null)
-            {
-                var next = await this.Next();
-                this.SetPeek(next);
-            }
-
-            var peek = this.peek!.Value;
-
-            var index = peek.Span.IndexOf((byte)10);
-            if (index == -1)
-            {
-                lineBuffer = !lineBuffer.IsEmpty
-                    ? lineBuffer.Add(peek.Slice(0, index))
-                    : peek.Slice(0, index)
-                    ;
-                this.ClearPeek();
-                continue;
-            }
-
-            // ended by \r\n
-            if ((index + 1) == peek.Length)
-            {
-                this.ClearPeek();
-                lineBuffer = !lineBuffer.IsEmpty
-                    ? lineBuffer.Add(peek.Slice(0, index))
-                    : peek.Slice(0, index);
-            }
-            else
-            {
-                lineBuffer = !lineBuffer.IsEmpty
-                    ? lineBuffer.Add(peek.Slice(0, index))
-                    : peek.Slice(0, index);
-                this.SetPeek(peek.Slice(index + 1));
-            }
-            break;
-        }
-        return System.Text.Encoding.ASCII.GetString(lineBuffer.Span);
-    }
-
-
     public async Task<string> ReadLineAsync()
     {
         Memory<byte> lineBuffer = new();
