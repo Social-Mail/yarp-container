@@ -81,7 +81,7 @@ public static class SocialMailRateLimiter
                     var errorCount = cache.Get<int?>(cacheKey) ?? 0;
                     if (errorCount > maxPenaltyPerSecond)
                     {
-                        Console.WriteLine($"RateLimited (Penalty): {cacheKey}");
+                        Console.WriteLine($"{{ \"action\": \"Rate-Limited-Penalty\", \"ip\": \"{httpContext.Connection.RemoteIpAddress}\" }}");
                         return RateLimitPartition.GetTokenBucketLimiter(
                             partitionKey: cacheKey + "_penalty",
                             factory: _ => new TokenBucketRateLimiterOptions
