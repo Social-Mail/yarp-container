@@ -5,6 +5,7 @@ services:
   tls-server:
     image: social-mail-yarp-proxy
     container_name: social-mail-yarp-proxy
+    pull_policy: build
     restart: no
     build:
       context: .
