@@ -139,27 +139,20 @@ public class SmtpServerClient : IDisposable
 
     private async Task CommandData(string arg)
     {
+
+        await this.WriteLineAsync("354 Ready");
+
         var file = Path.GetTempFileName();
         for(; ;)
         {
-            var line = await reader.ReadTillLineFeedAsync();
-            if(line.EndsWith("\r"))
+            var line = await reader.ReadLineAsync();
+            if(line.StartsWith(".")) 
             {
-                var next = await reader.ReadTillLineFeedAsync();
-                if(next.EndsWith(".\r"))
+                if(line.Length == 1)
                 {
-                    // we have reached the end
                     break;
                 }
-                // remove first dot
-                if(line.StartsWith("."))
-                {
-                    await System.IO.File.AppendAllTextAsync(file, line.Substring(1, line.Length-1));
-                } else
-                {
-                    await System.IO.File.AppendAllTextAsync(file, line.Substring(0, line.Length-1));
-                }
-                await System.IO.File.AppendAllTextAsync(file, next.Substring(0, line.Length-1));
+                await System.IO.File.AppendAllTextAsync(file, line.AsMemory().Slice(1));
                 continue;
             }
             await System.IO.File.AppendAllTextAsync(file, line);
@@ -205,17 +198,28 @@ public class SmtpServerClient : IDisposable
     {
         if(this.from != null)
         {
-            await this.WriteLineAsync("501 Syntax Error");
+            await this.WriteLineAsync(SmtpStatus.BadSequenceOfCommand);
             return;
         }
         this.from = SmtpParser.ParseAddress(arg);
+        if(this.from == null)
+        {
+            await this.WriteLineAsync(SmtpStatus.FailedParsingMailFrom);
+            return;
+        }
 
         // verify SPF first...
-        await spfVerificationService.VerifyAsync(
+        var error = await spfVerificationService.VerifyAsync(
             this.from,
             this.remoteAddress,
             this.hostNameAppearsAs,
             this.clientHostName);
+
+        if (error!=null)
+        {
+            await this.WriteLineAsync(error);
+            return;
+        }
 
         await smtpReceiver.MailFromAsync(this, arg);
         await this.WriteLineAsync("250 2.1.5 OK");
@@ -225,12 +229,17 @@ public class SmtpServerClient : IDisposable
     {
         if(this.from == null)
         {
-            await this.WriteLineAsync("501 Syntax Error");
+            await this.WriteLineAsync(SmtpStatus.BadSequenceOfCommand);
             return;
         }
-        arg = SmtpParser.ParseAddress(arg);
-        (this.to ??= new List<string>()).Add(arg);
-        await smtpReceiver.RcptToAsync(this, arg);
+        var parsed = SmtpParser.ParseAddress(arg);
+        if(parsed == null)
+        {
+            await this.WriteLineAsync(SmtpStatus.FailedParsingRcpt);
+            return;
+        }
+        (this.to ??= new List<string>()).Add(parsed);
+        await smtpReceiver.RcptToAsync(this, parsed);
         await this.WriteLineAsync("250 2.1.5 OK");
     }
 

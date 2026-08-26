@@ -2,26 +2,49 @@
 
 namespace DotNetReverseProxy.Smtp;
 
-public class SmtpException: Exception
+public readonly struct SmtpStatus
 {
-    public static SmtpException NewSpfRequired()
+    public static SmtpStatus SpfFailed()
     {
-        return new SmtpException(550, "5.7.1", "Permanent rejection because the sending IP address is not authorized by the domain's SPF record.");
+        return new SmtpStatus(550, "5.7.1", "Permanent rejection because the sending IP address is not authorized by the domain's SPF record.");
     }
 
-    public static SmtpException NewSpfNotDeclared()
+    public static SmtpStatus SpfNotDeclared()
     {
-        return new SmtpException(550, "5.7.26", "Permanent rejection because the sending IP address is not authorized by the domain's SPF record.");
+        return new SmtpStatus(550, "5.7.26", "Permanent rejection because the sending IP address is not authorized by the domain's SPF record.");
     }
 
-    public int ErrorCode { get; set; }
-
-    public string ExtendedErrorCode { get; set; }
-
-    public SmtpException(int errorCode, string extendedErrorCode, string message) :
-        base($"{errorCode}: {message}")
+    public static implicit operator SmtpStatus((int code, string extendedCode, string message) x)
     {
-        ErrorCode = errorCode;
-        ExtendedErrorCode = extendedErrorCode;
+        return new SmtpStatus(x.code, x.extendedCode, x.message);
+    }
+
+    public static implicit operator string(SmtpStatus status)
+    {
+        return status.ToString();
+    }
+
+    public static SmtpStatus FailedParsingMailFrom => (501, "5.1.7", "Failed to parse MAIL FROM address");
+
+    public static SmtpStatus FailedParsingRcpt => (501, "5.1.3", "Failed to parse RCPT address");
+
+    public static SmtpStatus BadSequenceOfCommand => (503, "5.5.1", "Bad Sequence of commands");
+
+    public readonly int Status;
+
+    public readonly string ExtendedStatus;
+
+    public readonly string Message;
+
+    public SmtpStatus(int errorCode, string extendedErrorCode, string message)
+    {
+        Status = errorCode;
+        ExtendedStatus = extendedErrorCode;
+        Message = message;
+    }
+
+    public override string ToString()
+    {
+        return $"{Status} {ExtendedStatus} {Message}";
     }
 }

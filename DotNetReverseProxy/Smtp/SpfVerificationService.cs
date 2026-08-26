@@ -15,7 +15,7 @@ public class SpfVerificationService
         this.cache = cache;
     }
 
-    internal async Task VerifyAsync(
+    internal async Task<SmtpStatus?> VerifyAsync(
         string from,
         string remoteAddress,
         string hostNameAppearsAs,
@@ -29,12 +29,14 @@ public class SpfVerificationService
         var v = await cache.GetOrCreateAsync(spfKey, (x) => SpfValidator.Fetch(address.Domain));
         if(v == null)
         {
-            throw SmtpException.NewSpfNotDeclared();
+            return SmtpStatus.SpfNotDeclared();
         }
 
         if(!v.Contains(remoteAddress))
         {
-            throw SmtpException.NewSpfRequired();
+            return SmtpStatus.SpfFailed();
         }
+
+        return null;
     }
 }
