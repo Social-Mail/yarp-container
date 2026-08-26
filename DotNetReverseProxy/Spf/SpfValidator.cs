@@ -1,8 +1,4 @@
 ﻿using DnsClientX;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.Extensions.Hosting;
-using Microsoft.VisualBasic;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -20,6 +16,24 @@ public class SpfValidator
     public SpfValidator()
     {
         
+    }
+
+    private List<IPNetwork> networks;
+
+    public bool Contains(string ipAddress)
+    {
+        IPAddress ip = IPAddress.Parse(ipAddress);
+        if(networks == null)
+        {
+            lock(this)
+            {
+                if(networks == null)
+                {
+                    networks = IPRanges.Select((x) => x.ToNetwork()).ToList();
+                }
+            }
+        }
+        return networks.Any((x) => x.Contains(ip));
     }
 
     public SpfValidator(string domain)
@@ -81,10 +95,14 @@ public class SpfValidator
         }
     }
 
-    public static async Task<SpfValidator> Fetch(string domainName)
+    public static async Task<SpfValidator?> Fetch(string domainName)
     {
         var spf = new SpfValidator(domainName);
         await spf.ResolveAsync();
+        if(!spf.IPRanges.Any())
+        {
+            return null;
+        }
         return spf;
     }
 
@@ -98,4 +116,13 @@ public class SpfAddress
     public string? IPv6 { get; set; }
 
     public string? Prefix { get; set; }
+
+    public IPNetwork ToNetwork()
+    {
+        if (IPv4 != null)
+        {
+            return IPNetwork.Parse(IPv4 + "/" + Prefix ?? "32");
+        }
+        return IPNetwork.Parse(IPv4 + "/" + Prefix ?? "128");
+    }
 }
