@@ -1,6 +1,7 @@
 ﻿using DotNetReverseProxy;
 using DotNetReverseProxy.Forward;
 using DotNetReverseProxy.Smtp;
+using DotNetReverseProxy.Tls;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.ResponseCompression;
@@ -37,8 +38,6 @@ try
 
     // this cache is for TLS resumption
     // this is not certificate store
-    MemoryCache tlsCache = new MemoryCache(new MemoryCacheOptions { });
-
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Logging.AddJsonConsole(options =>
@@ -56,35 +55,11 @@ try
     {
 
         kestrel.Limits.MaxRequestBodySize = 501*1024*1024;
-        var store = kestrel.ApplicationServices.GetRequiredService<CertificateStore>();
+        var tlsContext = kestrel.ApplicationServices.GetRequiredService<TlsContext>();
 
         var tls = new TlsHandshakeCallbackOptions
         {
-            OnConnection = async (c) =>
-            {
-                var cert = await store.GetAsync(c.ClientHelloInfo.ServerName);
-                var ctx = tlsCache.GetOrCreate(cert.Thumbprint, (ci) =>
-                {
-
-                    ci.SlidingExpiration = TimeSpan.FromMinutes(15);
-                    ci.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(60);
-
-                    var certContext = SslStreamCertificateContext.Create(cert, additionalCertificates: null);
-
-
-                    return new SslServerAuthenticationOptions
-                    {
-                        ServerCertificateContext = certContext, 
-                        AllowTlsResume = true,
-                        ApplicationProtocols = new List<SslApplicationProtocol> {
-                            SslApplicationProtocol.Http11,
-                            SslApplicationProtocol.Http2,
-                            SslApplicationProtocol.Http3 },
-                        EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13
-                    };
-                });
-                return ctx;
-            },
+            OnConnection = tlsContext.OnConnection,
         };
 
 
@@ -107,6 +82,7 @@ try
     builder.Services.AddSmtpServer();
     builder.Services.AddSingleton<JsonLogger>();
     builder.Services.AddSingleton<CertificateStore>();
+    builder.Services.AddSingleton<TlsContext>();
     builder.Services.AddSingleton<CertificateInstaller>();
     builder.Services.AddSingleton<ReverseHostFinder>();
     builder.Services.AddResponseCompression((options) =>
