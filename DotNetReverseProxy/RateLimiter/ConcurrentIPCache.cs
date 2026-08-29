@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.DataProtection.KeyManagement;
-using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
@@ -11,25 +9,26 @@ public class ConcurrentIPCache
 {
 
     private readonly TimeSpan _slidingTime;
-    private readonly TimeSpan _absoluteTime;
     private readonly ReaderWriterLockSlim _lockSlim = new();
     private readonly Timer _cleanupTimer;
 
     // Use standard dictionary but handle locks precisely
     private Dictionary<IPAddress, CacheItem> _dictionary = new();
 
-    public ConcurrentIPCache() : this(TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(60)) { }
+    private bool isCleaningRunning = false;
 
-    public ConcurrentIPCache(TimeSpan slidingTime, TimeSpan absoluteTime)
+    public ConcurrentIPCache(): this(TimeSpan.FromMinutes(5))
     {
-        _slidingTime = slidingTime;
-        _absoluteTime = absoluteTime;
+    }
+
+    public ConcurrentIPCache(TimeSpan slidingTimer)
+    {
+        _slidingTime = slidingTimer;
 
         // Fire the first check after the interval
-        var checkInterval = (int)(slidingTime.TotalMilliseconds / 2);
+        var checkInterval = (int)(_slidingTime.TotalMilliseconds / 2);
 
-        // Timeout.Infinite ensures the timer executes ONCE and halts
-        _cleanupTimer = new Timer(OnTime, null, checkInterval, Timeout.Infinite);
+        _cleanupTimer = new Timer(OnTime, null, checkInterval, checkInterval);
     }
 
     // High-performance background cleanup without allocating a whole new dictionary
@@ -41,6 +40,11 @@ public class ConcurrentIPCache
             var now = DateTime.UtcNow.Ticks;
 
             _lockSlim.EnterWriteLock();
+            if(isCleaningRunning)
+            {
+                return;
+            }
+            isCleaningRunning = true;
             try
             {
 
@@ -53,9 +57,12 @@ public class ConcurrentIPCache
 
                 foreach (var kv in _dictionary)
                 {
-                    if (now > Volatile.Read(ref kv.Value.AbsoluteExpiry))
+                    lock (kv.Value)
                     {
-                        continue;
+                        if (now >= kv.Value.AbsoluteExpiry)
+                        {
+                            continue;
+                        }
                     }
                     keep[kv.Key] = kv.Value;
                 }
@@ -75,18 +82,7 @@ public class ConcurrentIPCache
         }
         finally
         {
-            // RE-ARM ZONE: Schedule the NEXT single check window
-            // This is 100% immune to overlapping under heavy traffic
-            var nextInterval = (int)(_slidingTime.TotalMilliseconds / 2);
-
-            try
-            {
-                _cleanupTimer.Change(nextInterval, Timeout.Infinite);
-            }
-            catch (ObjectDisposedException)
-            {
-                // Suppress errors if the cache instance is being disposed during application shutdown
-            }
+            isCleaningRunning = false;
         }
     }
 
@@ -113,7 +109,10 @@ public class ConcurrentIPCache
                 value = v.Value;
                 // Update expiry safely using Volatile write without nested object locking
                 var newExpiry = DateTime.UtcNow.Ticks + _slidingTime.Ticks;
-                Volatile.Write(ref v.AbsoluteExpiry, newExpiry);
+                lock (v)
+                {
+                    v.AbsoluteExpiry = newExpiry;
+                }
                 return true;
             }
         }
@@ -122,7 +121,7 @@ public class ConcurrentIPCache
             _lockSlim.ExitReadLock();
         }
 
-        value = default!;
+        value = 0;
         return false;
     }
 
@@ -138,10 +137,15 @@ public class ConcurrentIPCache
         }
     }
 
-    public int GetOrUpdate(IPAddress key,
+    public int GetOrUpdate(IPAddress? key,
     Func<IPAddress, int> insertFactory,
     Func<IPAddress, int, int> updateFactory)
     {
+        if(key == null)
+        {
+            return 0;
+        }
+
         var now = DateTime.UtcNow.Ticks;
         bool needsRemoval = false;
 
@@ -158,7 +162,7 @@ public class ConcurrentIPCache
                     if (nv > 0)
                     {
                         v.Value = nv;
-                        Volatile.Write(ref v.AbsoluteExpiry, now + _slidingTime.Ticks);
+                        v.AbsoluteExpiry = now + _slidingTime.Ticks;
                         return nv;
                     }
 
@@ -173,11 +177,7 @@ public class ConcurrentIPCache
                     _lockSlim.EnterWriteLock();
                     try
                     {
-                        // Double-check verification: Ensure another thread didn't overwrite the key instance
-                        if (_dictionary.TryGetValue(key, out var current) && ReferenceEquals(current, v))
-                        {
-                            _dictionary.Remove(key);
-                        }
+                        _dictionary.Remove(key);
                     }
                     finally
                     {
@@ -205,12 +205,12 @@ public class ConcurrentIPCache
                             return 0;
                         }
                         existing.Value = nv;
-                        Volatile.Write(ref existing.AbsoluteExpiry, now + _slidingTime.Ticks);
+                        existing.AbsoluteExpiry = now + _slidingTime.Ticks;
                         return nv;
                     }
                 }
 
-                var newItem = new CacheItem(iv, now + _absoluteTime.Ticks);
+                var newItem = new CacheItem(iv, now + _slidingTime.Ticks);
                 _dictionary[key] = newItem;
                 return iv;
             }
@@ -225,4 +225,12 @@ public class ConcurrentIPCache
         }
     }
 
+    internal void RegisterSuccess(IPAddress? cacheKey)
+    {
+        if(cacheKey == null)
+        {
+            return;
+        }
+        this.GetOrUpdate(cacheKey, (x) => 0, (x, p) => p - 1);
+    }
 }

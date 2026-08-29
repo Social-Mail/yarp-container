@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Builder;
+﻿using DotNetReverseProxy.RateLimiter;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
@@ -14,15 +15,15 @@ namespace DotNetReverseProxy;
 public static class SocialMailRateLimiter
 {
 
-    public static string CacheKey(this HttpContext context)
-    {
-        return ToCacheKey(context.Connection?.RemoteIpAddress?.ToString() ?? "0.0.0.0");
-    }
+    //public static string CacheKey(this HttpContext context)
+    //{
+    //    return ToCacheKey(context.Connection?.RemoteIpAddress?.ToString() ?? "0.0.0.0");
+    //}
 
-    public static string ToCacheKey(string ipAddress)
-    {
-        return $"HttpStatus_Error_{ipAddress}";
-    }
+    //public static string ToCacheKey(string ipAddress)
+    //{
+    //    return $"HttpStatus_Error_{ipAddress}";
+    //}
 
 
     public static void AddSocialMailRateLimiter(this IServiceCollection services)
@@ -33,14 +34,14 @@ public static class SocialMailRateLimiter
 
         var selfIPs = (System.Environment.GetEnvironmentVariable("SELF_IPs") ?? "0.0.0.0")
                 .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                .Select((x) => ToCacheKey(x.Trim()));
+                .Select((x) => IPAddress.Parse(x));
 
 
         var skipIPs = (System.Environment.GetEnvironmentVariable("FORWARD_NO_RATE_LIMIT_IP_ADDRESSES") ?? "")
             .Split(",", StringSplitOptions.RemoveEmptyEntries)
-            .Select((x) => ToCacheKey(x.Trim()));
+            .Select((x) => IPAddress.Parse(x));
 
-        var allowedIPs = new HashSet<string>(skipIPs.Concat(skipIPs));
+        var allowedIPs = new HashSet<IPAddress>(skipIPs.Concat(skipIPs));
 
 
 
@@ -68,17 +69,18 @@ public static class SocialMailRateLimiter
                         }
                     }
 
-                    var cacheKey = httpContext.CacheKey();
+                    var cacheKey = httpContext.Connection.RemoteIpAddress;
 
-                    if (allowedIPs.Contains(cacheKey) || maxPenaltyPerSecond == 0)
+                    if (cacheKey == null || allowedIPs.Contains(cacheKey) || maxPenaltyPerSecond == 0)
                     {
                         httpContext.Items.TryAdd("no-rate-limit", "yes");
                         return RateLimitPartition.GetNoLimiter("bypass");
                     }
 
-                    var cache = httpContext.RequestServices.GetRequiredService<IMemoryCache>();
+                    var ipCache = httpContext.RequestServices.GetRequiredService<ConcurrentIPCache>();
 
-                    var errorCount = cache.Get<int?>(cacheKey) ?? 0;
+                    ipCache.TryGetValue(cacheKey, out var errorCount);
+
                     if (errorCount > maxPenaltyPerSecond)
                     {
                         Console.WriteLine($"{{ \"action\": \"Rate-Limited-Penalty\", \"ip\": \"{httpContext.Connection.RemoteIpAddress}\" }}");

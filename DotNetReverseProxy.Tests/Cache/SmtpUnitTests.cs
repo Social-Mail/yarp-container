@@ -10,7 +10,7 @@ public class ConcurrentCacheTests
     public async Task Read()
     {
 
-        var c = new ConcurrentIPCache(TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(2));
+        var c = new ConcurrentIPCache(TimeSpan.FromSeconds(1));
 
         var key = IPAddress.Parse("1.1.1.1");
 

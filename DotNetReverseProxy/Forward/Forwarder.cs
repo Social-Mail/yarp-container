@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using DotNetReverseProxy.RateLimiter;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Yarp.ReverseProxy.Forwarder;
@@ -25,7 +26,7 @@ public class Forwarder: IMiddleware
     private readonly HttpMessageInvoker client;
     private readonly ReverseHostFinder hostFinder;
     private readonly JsonLogger logger;
-    private readonly StripedCacheService stripedCache;
+    private readonly ConcurrentIPCache ipCache;
     private readonly int defaultPenalty;
 
     public Forwarder(
@@ -33,7 +34,8 @@ public class Forwarder: IMiddleware
         IHttpForwarder forwarder,
         ReverseHostFinder hostFinder,
         JsonLogger logger,
-        StripedCacheService stripedCache)
+        ConcurrentIPCache ipCache
+        )
     {
         this.forwarder = forwarder;
         this.requestOptions = new ForwarderRequestConfig {
@@ -41,7 +43,7 @@ public class Forwarder: IMiddleware
         };
         this.hostFinder = hostFinder;
         this.logger = logger;
-        this.stripedCache = stripedCache;
+        this.ipCache = ipCache;
         this.defaultPenalty = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_ERROR_PENALTY") ?? "1", out var n) ? n : 1;
         this.client = new HttpMessageInvoker(new SocketsHttpHandler
         {
@@ -133,7 +135,7 @@ public class Forwarder: IMiddleware
             return;
         }
 
-        var cacheKey = context.CacheKey();
+        var cacheKey = context.Connection.RemoteIpAddress;
         var request = context.Request;
         var response = context.Response;
         var status = response.StatusCode;
@@ -159,7 +161,7 @@ public class Forwarder: IMiddleware
                     penalty = 2;
 
                 }
-                stripedCache.Update<int?>(cacheKey, (x) => x + penalty, penalty, TrackExpiration);
+                ipCache.GetOrUpdate(cacheKey, (x) => penalty, (x, p) => p + penalty);
             }
 
             var duration = ts.TotalMilliseconds.ToString("0.##", CultureInfo.InvariantCulture) + "ms";
@@ -191,17 +193,8 @@ public class Forwarder: IMiddleware
                 });
             }
 
-            var currentCount = stripedCache.Get<int?>(cacheKey);
-            if (currentCount == null)
-            {
-                return;
-            }
-            if (currentCount <= 1)
-            {
-                stripedCache.Remove(cacheKey);
-                return;
-            }
-            stripedCache.Update<int?>(cacheKey, (x) => x - 1, 1, TrackExpiration);
+            // ipCache.GetOrUpdate(cacheKey, (x) => 0, (x, p) => p - 1);
+            ipCache.RegisterSuccess(cacheKey);
         }
     }
 }
