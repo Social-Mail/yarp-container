@@ -5,92 +5,62 @@ using System.Threading;
 
 namespace DotNetReverseProxy.RateLimiter;
 
+using System;
+using System.Collections.Concurrent;
+using System.Net;
+using System.Threading;
+
 public class ConcurrentIPCache
 {
-
     private readonly TimeSpan _slidingTime;
-    private readonly ReaderWriterLockSlim _lockSlim = new();
+    private readonly ConcurrentDictionary<IPAddress, CacheItem> _dictionary = new();
     private readonly Timer _cleanupTimer;
+    private int _isCleaningRunning = 0; // Atomic flag
 
-    // Use standard dictionary but handle locks precisely
-    private Dictionary<IPAddress, CacheItem> _dictionary = new();
-
-    private bool isCleaningRunning = false;
-
-    public ConcurrentIPCache(): this(TimeSpan.FromMinutes(5))
-    {
-    }
+    public ConcurrentIPCache() : this(TimeSpan.FromMinutes(5)) { }
 
     public ConcurrentIPCache(TimeSpan slidingTimer)
     {
         _slidingTime = slidingTimer;
-
-        // Fire the first check after the interval
         var checkInterval = (int)(_slidingTime.TotalMilliseconds / 2);
-
         _cleanupTimer = new Timer(OnTime, null, checkInterval, checkInterval);
     }
 
-    // High-performance background cleanup without allocating a whole new dictionary
     private void OnTime(object? state)
     {
+        // Thread-safe flag check without ReaderWriterLock Slim
+        if (Interlocked.CompareExchange(ref _isCleaningRunning, 1, 0) != 0)
+        {
+            return;
+        }
+
         try
         {
+            long now = DateTime.UtcNow.Ticks;
 
-            var now = DateTime.UtcNow.Ticks;
-
-            _lockSlim.EnterWriteLock();
-            if(isCleaningRunning)
+            // Allocation-free removal using ConcurrentDictionary's internal thread-safe iterator
+            foreach (var kv in _dictionary)
             {
-                return;
-            }
-            isCleaningRunning = true;
-            try
-            {
-
-                if (_dictionary.Count == 0)
+                if (now >= Volatile.Read(ref kv.Value.AbsoluteExpiry))
                 {
-                    return;
+                    _dictionary.TryRemove(kv.Key, out _);
                 }
-
-                var keep = new Dictionary<IPAddress, CacheItem>();
-
-                foreach (var kv in _dictionary)
-                {
-                    lock (kv.Value)
-                    {
-                        if (now >= kv.Value.AbsoluteExpiry)
-                        {
-                            continue;
-                        }
-                    }
-                    keep[kv.Key] = kv.Value;
-                }
-
-                _dictionary = keep;
-
             }
-            finally
-            {
-                _lockSlim.ExitWriteLock();
-            }
-
         }
         catch
         {
-            // ignore exceptions
+            // Log exceptions if needed
         }
         finally
         {
-            isCleaningRunning = false;
+            Volatile.Write(ref _isCleaningRunning, 0);
         }
     }
 
     private class CacheItem
     {
-        // Must be long to allow Interlocked/Volatile memory operations
-        internal long AbsoluteExpiry;
-        internal int Value;
+        public long AbsoluteExpiry; // Modified atomically via Volatile/Interlocked
+        public int Value;
 
         public CacheItem(int value, long expiry)
         {
@@ -101,136 +71,69 @@ public class ConcurrentIPCache
 
     public bool TryGetValue(IPAddress key, out int value)
     {
-        _lockSlim.EnterReadLock();
-        try
+        if (_dictionary.TryGetValue(key, out var item))
         {
-            if (_dictionary.TryGetValue(key, out var v))
-            {
-                value = v.Value;
-                // Update expiry safely using Volatile write without nested object locking
-                var newExpiry = DateTime.UtcNow.Ticks + _slidingTime.Ticks;
-                lock (v)
-                {
-                    v.AbsoluteExpiry = newExpiry;
-                }
-                return true;
-            }
-        }
-        finally
-        {
-            _lockSlim.ExitReadLock();
+            // Thread-safe read of primitive types without a lock statement
+            value = Volatile.Read(ref item.Value);
+
+            // Atomically slide the expiry window
+            long newExpiry = DateTime.UtcNow.Ticks + _slidingTime.Ticks;
+            Volatile.Write(ref item.AbsoluteExpiry, newExpiry);
+            return true;
         }
 
         value = 0;
         return false;
     }
 
-    public bool ContainsKey(IPAddress a)
+    public int GetOrUpdate(IPAddress? key, Func<IPAddress, int> insertFactory, Func<IPAddress, int, int> updateFactory)
     {
-        _lockSlim.EnterReadLock();
-        try
-        {
-            return _dictionary.ContainsKey(a);
-        } finally
-        {
-            _lockSlim.ExitReadLock();
-        }
-    }
+        if (key == null) return 0;
 
-    public int GetOrUpdate(IPAddress? key,
-    Func<IPAddress, int> insertFactory,
-    Func<IPAddress, int, int> updateFactory)
-    {
-        if(key == null)
-        {
-            return 0;
-        }
+        long expiry = DateTime.UtcNow.Ticks + _slidingTime.Ticks;
 
-        var now = DateTime.UtcNow.Ticks;
-        bool needsRemoval = false;
-
-        _lockSlim.EnterUpgradeableReadLock();
-        try
+        while (true)
         {
-            if (_dictionary.TryGetValue(key, out var v))
+            if (_dictionary.TryGetValue(key, out var existingItem))
             {
-                int nv;
-                // 1. Thread-safe mutation isolation block
-                lock (v)
+                // Thread-safe update inside a lock context bound strictly to the target item bucket
+                lock (existingItem)
                 {
-                    nv = updateFactory(key, v.Value);
-                    if (nv > 0)
+                    // Ensure it wasn't removed right before we locked it
+                    if (!_dictionary.ContainsKey(key)) continue;
+
+                    int newValue = updateFactory(key, existingItem.Value);
+                    if (newValue <= 0)
                     {
-                        v.Value = nv;
-                        v.AbsoluteExpiry = now + _slidingTime.Ticks;
-                        return nv;
+                        _dictionary.TryRemove(key, out _);
+                        return 0;
                     }
 
-                    // If the count dropped to 0 or less, mark for removal
-                    needsRemoval = true;
-                }
-
-                // 2. SAFE ZONE: We have completely exited lock(v).
-                // We can now upgrade to WriteLock cleanly without causing a cross-lock deadlock.
-                if (needsRemoval)
-                {
-                    _lockSlim.EnterWriteLock();
-                    try
-                    {
-                        _dictionary.Remove(key);
-                    }
-                    finally
-                    {
-                        _lockSlim.ExitWriteLock();
-                    }
-                    return 0;
+                    existingItem.Value = newValue;
+                    Volatile.Write(ref existingItem.AbsoluteExpiry, expiry);
+                    return newValue;
                 }
             }
 
-            // ITEM MISSING PATH
-            var iv = insertFactory(key);
-            if (iv <= 0) return 0;
+            // Item does not exist path
+            int insertedValue = insertFactory(key);
+            if (insertedValue <= 0) return 0;
 
-            _lockSlim.EnterWriteLock();
-            try
+            var newItem = new CacheItem(insertedValue, expiry);
+            if (_dictionary.TryAdd(key, newItem))
             {
-                if (_dictionary.TryGetValue(key, out var existing))
-                {
-                    lock (existing)
-                    {
-                        var nv = updateFactory(key, existing.Value);
-                        if (nv <= 0)
-                        {
-                            _dictionary.Remove(key);
-                            return 0;
-                        }
-                        existing.Value = nv;
-                        existing.AbsoluteExpiry = now + _slidingTime.Ticks;
-                        return nv;
-                    }
-                }
-
-                var newItem = new CacheItem(iv, now + _slidingTime.Ticks);
-                _dictionary[key] = newItem;
-                return iv;
+                return insertedValue;
             }
-            finally
-            {
-                _lockSlim.ExitWriteLock();
-            }
-        }
-        finally
-        {
-            _lockSlim.ExitUpgradeableReadLock();
+            // If TryAdd fails, another thread inserted it first. Loop back to update it.
         }
     }
 
-    internal void RegisterSuccess(IPAddress? cacheKey)
+    public void RegisterSuccess(IPAddress? cacheKey)
     {
-        if(cacheKey == null)
-        {
-            return;
-        }
-        this.GetOrUpdate(cacheKey, (x) => 0, (x, p) => p - 1);
+        if (cacheKey == null) return;
+        GetOrUpdate(cacheKey, (x) => 0, (x, currentErrors) => currentErrors - 1);
     }
+
+    public bool ContainsKey(IPAddress a) => _dictionary.ContainsKey(a);
 }
+
