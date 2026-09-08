@@ -15,12 +15,14 @@ public class TlsContext
 {
     private readonly CertificateStore store;
     private readonly BannedIPs bannedIPs;
+    private readonly JsonLogger jsonLogger;
     private readonly MemoryCache tlsCache;
 
-    public TlsContext(CertificateStore store, BannedIPs bannedIPs)
+    public TlsContext(CertificateStore store, BannedIPs bannedIPs, JsonLogger jsonLogger)
     {
         this.store = store;
         this.bannedIPs = bannedIPs;
+        this.jsonLogger = jsonLogger;
         tlsCache = new MemoryCache(new MemoryCacheOptions { });
     }
 
@@ -31,6 +33,9 @@ public class TlsContext
             {
                 if(bannedIPs.IsBanned(ip.Address))
                 {
+                    jsonLogger.Log(new {
+                        aborted = ip.Address.ToString(),   
+                    });
                     cc.Abort();
                     return next(cc);
                 }

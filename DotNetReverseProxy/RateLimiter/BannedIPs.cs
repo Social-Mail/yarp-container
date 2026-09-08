@@ -17,7 +17,7 @@ public class BannedIPs
     {
         cache.GetOrCreate($"banned-{ip}", (x) =>
         {
-            x.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1);
+            x.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
             return ip;
         });
     }

@@ -169,12 +169,14 @@ public class Forwarder: IMiddleware
 
                 }
                 var n = ipCache.GetOrUpdate(cacheKey, (x) => penalty, (x, p) => p + penalty);
-                if(n > ipCache.MaxPenalty)
+                if(n >= ipCache.MaxPenalty)
                 {
                     bannedIPs.Add(cacheKey);
                     try
                     {
-                        context.Connection.RequestClose();
+                        var connectionLifetime = context.Features.Get<Microsoft.AspNetCore.Connections.Features.IConnectionSocketFeature>();
+                        connectionLifetime?.Socket?.Close();
+                        // context.Connection.RequestClose();
                     } catch { }
                 }
             }
