@@ -1,6 +1,7 @@
 ﻿using Amazon.Runtime.Internal.Util;
 using DotNetReverseProxy;
 using DotNetReverseProxy.Forward;
+using DotNetReverseProxy.HostLookup;
 using DotNetReverseProxy.Smtp;
 using DotNetReverseProxy.Tls;
 using Microsoft.AspNetCore.Builder;
