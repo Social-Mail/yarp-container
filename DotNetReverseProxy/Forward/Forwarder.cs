@@ -188,8 +188,13 @@ public class Forwarder: IMiddleware
                     try
                     {
                         var connectionLifetime = context.Features.Get<Microsoft.AspNetCore.Connections.Features.IConnectionSocketFeature>();
-                        connectionLifetime?.Socket?.Close();
-                        // context.Connection.RequestClose();
+                        if(connectionLifetime != null)
+                        {
+                            logger.Log(new {
+                                socket = "closed"
+                            });   
+                            connectionLifetime.Socket.Close();
+                        }
                     } catch { }
                 }
             }
