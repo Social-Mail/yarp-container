@@ -73,6 +73,19 @@ public class Forwarder: IMiddleware
             return;
         }
 
+        var cacheKey = httpContext.Connection.RemoteIpAddress;
+        if(cacheKey != null)
+        {
+            if(bannedIPs.IsBanned(cacheKey))
+            {
+                var response = httpContext.Response;
+                response.StatusCode = 409;
+                await response.WriteAsync("Too many connections...");
+                await response.CompleteAsync();
+                return;
+            }
+        }
+
         var start = DateTime.UtcNow;
 
         var p = hostFinder.GetPort(request.Headers.Host!);
