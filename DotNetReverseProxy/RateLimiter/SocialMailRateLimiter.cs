@@ -33,17 +33,13 @@ public static class SocialMailRateLimiter
         var readRequestRegEx = new Regex("^(GET|HEAD|OPTIONS)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         var selfIPs = (System.Environment.GetEnvironmentVariable("SELF_IPs") ?? "0.0.0.0")
-                .Split(",", StringSplitOptions.RemoveEmptyEntries)
-                .Select((x) => IPAddress.Parse(x));
+                .Split(",", StringSplitOptions.RemoveEmptyEntries);
 
 
         var skipIPs = (System.Environment.GetEnvironmentVariable("FORWARD_NO_RATE_LIMIT_IP_ADDRESSES") ?? "")
-            .Split(",", StringSplitOptions.RemoveEmptyEntries)
-            .Select((x) => IPAddress.Parse(x));
+            .Split(",", StringSplitOptions.RemoveEmptyEntries);
 
-        var allowedIPs = new HashSet<IPAddress>(skipIPs.Concat(skipIPs));
-
-
+        var allowedIPs = new IPAddressRange(skipIPs.Concat(selfIPs));
 
         var maxPenaltyPerSecond = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out var n) ? n : 60;
         
