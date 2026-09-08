@@ -1,0 +1,33 @@
+version: '3.4'
+name: social-mail-cloud-server
+services:
+
+  tls-server:
+    image: social-mail-yarp-proxy
+    container_name: social-mail-yarp-proxy
+    pull_policy: build
+    restart: no
+    build:
+      context: ../
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - ACME_MODE=self-signed
+      - FORWARD_PORT=8001
+      - FORWARD_HOST=fail-tester
+
+  fail-tester:
+    image: social-mail-yarp-fail-tester
+    container_name: social-mail-yarp-fail-tester
+    pull_policy: build
+    restart: no
+    build:
+      context: .
+    ports:
+      - 8001:8001
+    environment:
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - PORT=8001
+      - TEST_HOST=tls-server
