@@ -28,8 +28,8 @@ public static class SocialMailRateLimiter
 
     public static void AddSocialMailRateLimiter(this IServiceCollection services)
     {
-        services.AddSingleton<StripedCacheService>();
-
+        services.AddSingleton<ConcurrentIPCache>();
+        services.AddSingleton<BannedIPs>();
         var readRequestRegEx = new Regex("^(GET|HEAD|OPTIONS)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
         var selfIPs = (System.Environment.GetEnvironmentVariable("SELF_IPs") ?? "0.0.0.0")

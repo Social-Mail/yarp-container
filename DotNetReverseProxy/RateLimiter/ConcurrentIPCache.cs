@@ -15,6 +15,7 @@ public class ConcurrentIPCache
     private readonly TimeSpan _slidingTime;
     private readonly ConcurrentDictionary<IPAddress, CacheItem> _dictionary = new();
     private readonly Timer _cleanupTimer;
+    public readonly int MaxPenalty;
     private int _isCleaningRunning = 0; // Atomic flag
 
     public ConcurrentIPCache() : this(TimeSpan.FromMinutes(5)) { }
@@ -24,6 +25,8 @@ public class ConcurrentIPCache
         _slidingTime = slidingTimer;
         var checkInterval = (int)(_slidingTime.TotalMilliseconds / 2);
         _cleanupTimer = new Timer(OnTime, null, checkInterval, checkInterval);
+        this.MaxPenalty = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out var n) ? n : 60;
+
     }
 
     private void OnTime(object? state)

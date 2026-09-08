@@ -27,6 +27,7 @@ public class Forwarder: IMiddleware
     private readonly ReverseHostFinder hostFinder;
     private readonly JsonLogger logger;
     private readonly ConcurrentIPCache ipCache;
+    private readonly BannedIPs bannedIPs;
     private readonly int defaultPenalty;
 
     public Forwarder(
@@ -34,7 +35,8 @@ public class Forwarder: IMiddleware
         IHttpForwarder forwarder,
         ReverseHostFinder hostFinder,
         JsonLogger logger,
-        ConcurrentIPCache ipCache
+        ConcurrentIPCache ipCache,
+        BannedIPs bannedIPs
         )
     {
         this.forwarder = forwarder;
@@ -44,6 +46,7 @@ public class Forwarder: IMiddleware
         this.hostFinder = hostFinder;
         this.logger = logger;
         this.ipCache = ipCache;
+        this.bannedIPs = bannedIPs;
         this.defaultPenalty = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_ERROR_PENALTY") ?? "1", out var n) ? n : 1;
         this.client = new HttpMessageInvoker(new SocketsHttpHandler
         {
@@ -136,6 +139,10 @@ public class Forwarder: IMiddleware
         }
 
         var cacheKey = context.Connection.RemoteIpAddress;
+        if (cacheKey == null)
+        {
+            return;
+        }
         var request = context.Request;
         var response = context.Response;
         var status = response.StatusCode;
@@ -161,7 +168,15 @@ public class Forwarder: IMiddleware
                     penalty = 2;
 
                 }
-                ipCache.GetOrUpdate(cacheKey, (x) => penalty, (x, p) => p + penalty);
+                var n = ipCache.GetOrUpdate(cacheKey, (x) => penalty, (x, p) => p + penalty);
+                if(n > ipCache.MaxPenalty)
+                {
+                    bannedIPs.Add(cacheKey);
+                    try
+                    {
+                        context.Connection.RequestClose();
+                    } catch { }
+                }
             }
 
             var duration = ts.TotalMilliseconds.ToString("0.##", CultureInfo.InvariantCulture) + "ms";

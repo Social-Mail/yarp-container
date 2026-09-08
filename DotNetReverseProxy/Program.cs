@@ -1,4 +1,5 @@
-﻿using DotNetReverseProxy;
+﻿using Amazon.Runtime.Internal.Util;
+using DotNetReverseProxy;
 using DotNetReverseProxy.Forward;
 using DotNetReverseProxy.Smtp;
 using DotNetReverseProxy.Tls;
@@ -59,7 +60,7 @@ try
 
         var tls = new TlsHandshakeCallbackOptions
         {
-            OnConnection = tlsContext.OnConnection,
+            OnConnection = tlsContext.OnHandshake,
         };
 
 
@@ -67,6 +68,9 @@ try
         kestrel.Listen(ip, 443, portOptions =>
         {
             portOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
+
+            portOptions.Use(tlsContext.OnConnection);
+
             portOptions.UseHttps(tls);
         });
 
