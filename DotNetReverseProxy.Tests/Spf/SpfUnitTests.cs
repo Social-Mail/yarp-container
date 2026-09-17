@@ -1,7 +1,7 @@
 ﻿using Amazon.Runtime.Credentials.Internal;
 using DnsClientX;
-using DotNetReverseProxy.Smtp;
-using DotNetReverseProxy.Spf;
+using NeuroSpeech.Smtp;
+using NeuroSpeech.Smtp.Spf;
 using System;
 using System.Collections.Generic;
 using System.Text;

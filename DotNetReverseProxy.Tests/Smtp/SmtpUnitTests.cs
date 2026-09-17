@@ -1,4 +1,4 @@
-using DotNetReverseProxy.Smtp;
+using NeuroSpeech.Smtp;
 
 namespace DotNetReverseProxy.Tests.Smtp;
 

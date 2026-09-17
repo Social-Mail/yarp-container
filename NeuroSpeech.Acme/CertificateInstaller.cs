@@ -1,0 +1,227 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Security.Cryptography;
+using System.Threading;
+using System.Threading.Tasks;
+using Amazon;
+using Amazon.Route53.Model;
+using Amazon.Runtime;
+using NeuroSpeech.Acme;
+using NeuroSpeech.Acme.Models;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Caching.Memory;
+
+namespace NeuroSpeech.Acme;
+
+public class CertificateInstaller: IMiddleware
+{
+    private readonly JsonLogger logger;
+    private readonly string accountKeyPath;
+    private readonly string? awsAccessKey;
+    private readonly string? awsAccessKeySecret;
+    private readonly string? awsZoneID;
+    private readonly string? awsZoneSuffix;
+
+    private readonly string storagePath;
+
+    private readonly string acmeEndPoint;
+    private readonly string? acmeEAB;
+    private readonly string? acmeEABHmac;
+    private readonly string? acmeEmail;
+
+    public CertificateInstaller(IMemoryCache cache, JsonLogger logger)
+    {
+        this.logger = logger;
+        this.storagePath = System.Environment.GetEnvironmentVariable("FORWARD_CERT_STORE") ?? "/cache/certs/";
+        FileEx.EnsureDirectory(this.storagePath);
+        this.accountKeyPath = System.IO.Path.Join(this.storagePath, "account.key");
+        this.awsAccessKey = System.Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+        this.awsAccessKeySecret = System.Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+        this.awsZoneID = System.Environment.GetEnvironmentVariable("AWS_ZONE_ID");
+        this.awsZoneSuffix = System.Environment.GetEnvironmentVariable("AWS_ZONE_SUFFIX");
+        this.acmeEndPoint = System.Environment.GetEnvironmentVariable("ACME_END_POINT") ?? "staging";
+        this.acmeEAB = System.Environment.GetEnvironmentVariable("ACME_EAB_KID");
+        this.acmeEABHmac= System.Environment.GetEnvironmentVariable("ACME_EAB_HMAC");
+        this.acmeEmail = System.Environment.GetEnvironmentVariable("ACME_EMAIL");
+
+        switch (this.acmeEndPoint?.ToLower())
+        {
+            case "staging":
+                this.acmeEndPoint = AcmeUrls.letsEncrypt.staging;
+                break;
+            case "production":
+                this.acmeEndPoint = AcmeUrls.letsEncrypt.production;
+                break;
+        }
+
+        if (this.awsZoneSuffix != null && !this.awsZoneSuffix.StartsWith("."))
+        {
+            this.awsZoneSuffix = "." + this.awsZoneSuffix;
+        }
+    }
+
+    internal async Task<CertificateInfo> InstallCertificateAsync(string serverName)
+    {
+        var client = this.acmeEAB != null && this.acmeEABHmac != null
+                ? new AcmeClient(this.acmeEndPoint, this.accountKeyPath, this.acmeEAB, this.acmeEABHmac)
+                : new AcmeClient(this.acmeEndPoint, this.accountKeyPath);
+
+        using RSA domainKey = RSA.Create(2048);
+        var cert = await client.CreateCertificateAsync(this.acmeEmail, domainKey, serverName, this.SaveChallengesAsync);
+
+        string privateKeyPem = domainKey.ExportPkcs8PrivateKeyPem();
+        return new CertificateInfo
+        {
+            Cert = cert,
+            Key = privateKeyPem
+        };
+    }
+
+    async Task<IAsyncDisposable> SaveChallengesAsync(AcmeChallengeGroup[] challenges, CancellationToken token)
+    {
+        var d = new AsyncDisposeList();
+
+        foreach(var a in challenges)
+        {
+            switch(a.Type)
+            {
+                case "http-01":
+
+                    foreach(var c in a.Challenges)
+                    {
+                        var f = GetChallengePath(c.Token);
+                        await System.IO.File.WriteAllTextAsync(f, c.KeyAuthorization);
+                        d.Add(async () =>
+                        {
+                            System.IO.File.Delete(f);
+                        });
+                    }
+
+                    break;
+                case "dns-01":
+
+                    await this.SaveDnsAsync(a, d);
+
+                    break;
+            }
+        }
+
+        return d;
+    }
+
+    private async Task SaveDnsAsync(AcmeChallengeGroup a, AsyncDisposeList d)
+    {
+        var cred = new BasicAWSCredentials(this.awsAccessKey, this.awsAccessKeySecret);
+        var c = new Amazon.Route53.AmazonRoute53Client(cred, RegionEndpoint.USEast1);
+
+        var Name = $"{a.DomainName}{this.awsZoneSuffix}";
+        var Type = "TXT";
+        var ResourceRecords = a.Challenges.Select((a1) => new ResourceRecord($"\"{ a1.KeyAuthorization }\"")).ToList();
+
+        Console.WriteLine($"Saving {Name} - {Type}: {a.Authorization}");
+
+        await c.ChangeResourceRecordSetsAsync(new Amazon.Route53.Model.ChangeResourceRecordSetsRequest
+        {
+            HostedZoneId = this.awsZoneID,
+            ChangeBatch = new Amazon.Route53.Model.ChangeBatch
+            {
+                Comment = "Adding AMCE Challenge",
+                Changes = new System.Collections.Generic.List<Amazon.Route53.Model.Change>
+                {
+                    new Amazon.Route53.Model.Change
+                    {
+                        Action = "UPSERT",                        
+                        ResourceRecordSet = new Amazon.Route53.Model.ResourceRecordSet
+                        {
+                            Name = Name,
+                            Type = Type,
+                            TTL = 60,
+                            ResourceRecords = ResourceRecords
+                            
+                        }
+                    }
+                }
+            }
+        });
+
+        // we will let it propogate first..
+        await Task.Delay(TimeSpan.FromSeconds(15));
+
+        d.Add(async () =>
+        {
+            await c.ChangeResourceRecordSetsAsync(new ChangeResourceRecordSetsRequest
+            {
+                HostedZoneId = this.awsZoneID,
+                ChangeBatch = new ChangeBatch
+                {
+                    Comment = "Deleting AMCE Challenge",
+                    Changes = new System.Collections.Generic.List<Change>
+                    {
+                        new Change
+                        {
+                            Action = "DELETE",
+                            ResourceRecordSet = new ResourceRecordSet
+                            {
+                                Name = Name,
+                                Type = Type,
+                                TTL = 60,
+                                ResourceRecords = ResourceRecords
+                            }                            
+                        }
+                    }
+                }
+            });
+        });
+        
+    }
+
+    public Task InvokeAsync(HttpContext context, RequestDelegate next)
+    {
+        var request = context.Request;
+        if (request.IsHttps)
+        {
+            return next(context);
+        }
+        return SendChallenge(context);
+    }
+
+    async Task SendChallenge(HttpContext context)
+    {
+        var request = context.Request;
+        var response = context.Response;
+        var tokens = request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var file = tokens[0];
+        var challengePath = GetChallengePath(file);
+        if (!System.IO.File.Exists(challengePath))
+        {
+            response.StatusCode = 404;
+            return;
+        }
+        var content = await System.IO.File.ReadAllTextAsync(challengePath);
+        response.StatusCode = 200;
+        await response.WriteAsync(content);
+    }
+
+    private string GetChallengePath(string file)
+    {
+        var dir = this.storagePath + "/challenges/";
+        FileEx.EnsureDirectory(dir);
+        return System.IO.Path.Join(dir + file);
+    }
+}
+
+public static class CertificateInstallerExtensions
+{
+    public static IApplicationBuilder UseCertificateInstaller(this IApplicationBuilder app)
+    {
+        app.Map("/.well-known/acme-challenge", mapped =>
+        {
+            mapped.UseMiddleware<CertificateInstaller>();
+        });
+        return app;
+    }
+}

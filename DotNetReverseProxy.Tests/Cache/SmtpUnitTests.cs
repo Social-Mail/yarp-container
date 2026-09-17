@@ -1,5 +1,4 @@
 using DotNetReverseProxy.RateLimiter;
-using DotNetReverseProxy.Smtp;
 using System.Net;
 
 namespace DotNetReverseProxy.Tests;
