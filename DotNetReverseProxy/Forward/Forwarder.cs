@@ -111,6 +111,9 @@ public class Forwarder: IMiddleware
                 responseHeaders.TryAdd("X-Frame-Options", "SAMEORIGIN");
                 responseHeaders.TryAdd("Referrer-Policy", "same-origin");
 
+
+                proxyRequest.Headers.Remove("x-forwarded-for");
+
                 // Customize the query string:
                 var queryContext = new QueryTransformContext(context.Request);
                 var ip = context.Connection.RemoteIpAddress;
