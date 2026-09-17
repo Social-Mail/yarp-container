@@ -58,6 +58,7 @@ public class SmtpWebProxy : ISmtpReceiver
                 var response = await RequestBuilder.Post($"http://{g.Key}/social-mail/v2/local/data")
                     .Multipart("helo", client.HeloHostName)
                     .Multipart("reverseDns", client.ReverseDnsName)
+                    .Multipart("remoteIPAddress", client.RemoteIPAddress)
                     .Multipart("from", from.ToString())
                     .Multipart("recipients", string.Join(",", g.Value.Select((x) => x.ToString())))
                     .MultipartFile("mail", s)
