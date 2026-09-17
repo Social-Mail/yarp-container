@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using MimeKit;
 using NeuroSpeech.Acme;
 using System;
 using System.Collections.Generic;
@@ -28,8 +29,8 @@ public class SmtpServerClient : IDisposable
         this.host = System.Environment.GetEnvironmentVariable("SMTP_HOST");
     }
 
-    private string remoteAddress = "";
-    private string clientHostName = "";
+    public string RemoteIPAddress { get; private set; } = "";
+    public string ReverseDnsName { get; private set; } = "";
     private TcpClient? client;
     private Stream? stream;
     private AsyncSocketReader reader;
@@ -42,9 +43,9 @@ public class SmtpServerClient : IDisposable
     private bool secure;
     private bool shouldContinue;
 
-    private string? from;
-    private List<string>? to;
-    private string hostNameAppearsAs;
+    public MailboxAddress? From { get; private set; }
+    private List<MailboxAddress>? to;
+    public string HeloHostName { get; private set; }
     private object maxMessageSize;
 
     public void Dispose()
@@ -158,18 +159,18 @@ public class SmtpServerClient : IDisposable
             await System.IO.File.AppendAllTextAsync(file, line);
         }
 
-        await smtpReceiver.DataAsync(this, this.from, this.to, file);
+        await smtpReceiver.DataAsync(this, this.From, this.to, file);
 
         await this.WriteLineAsync("250 2.0.0 OK");
 
-        this.from = null;
+        this.From = null;
         this.to = null;
 
     }
 
     private async Task CommandEHLO(string arg)
     {
-        this.hostNameAppearsAs = arg;
+        this.HeloHostName = arg;
         var features = new string[] {
                             "250-OK",
                             $"250-SIZE { this.maxMessageSize}",
@@ -183,26 +184,26 @@ public class SmtpServerClient : IDisposable
 
     private async Task CommandHELO(string arg)
     {
-        this.hostNameAppearsAs = arg;
+        this.HeloHostName = arg;
         await this.WriteLineAsync("250 OK");
     }
 
     private async Task CommandRSET()
     {
-        this.from = null;
+        this.From = null;
         this.to = null;
         await this.WriteLineAsync("250 2.1.5 OK");
     }
 
     private async Task CommandMailFrom(string arg)
     {
-        if(this.from != null)
+        if(this.From != null)
         {
             await this.WriteLineAsync(SmtpStatus.BadSequenceOfCommand);
             return;
         }
-        this.from = SmtpParser.ParseAddress(arg);
-        if(this.from == null)
+        this.From = SmtpParser.ParseAddress(arg);
+        if(this.From == null)
         {
             await this.WriteLineAsync(SmtpStatus.FailedParsingMailFrom);
             return;
@@ -210,10 +211,10 @@ public class SmtpServerClient : IDisposable
 
         // verify SPF first...
         var error = await spfVerificationService.VerifyAsync(
-            this.from,
-            this.remoteAddress,
-            this.hostNameAppearsAs,
-            this.clientHostName);
+            this.From.ToString(),
+            this.RemoteIPAddress,
+            this.HeloHostName,
+            this.ReverseDnsName);
 
         if (error!=null)
         {
@@ -221,13 +222,14 @@ public class SmtpServerClient : IDisposable
             return;
         }
 
-        await smtpReceiver.MailFromAsync(this, arg);
-        await this.WriteLineAsync("250 2.1.5 OK");
+        var status = await smtpReceiver.MailFromAsync(this, this.From);
+        // await this.WriteLineAsync("250 2.1.5 OK");
+        await this.WriteLineAsync(status);
     }
 
     private async Task CommandRCPT(string arg)
     {
-        if(this.from == null)
+        if(this.From == null)
         {
             await this.WriteLineAsync(SmtpStatus.BadSequenceOfCommand);
             return;
@@ -238,7 +240,7 @@ public class SmtpServerClient : IDisposable
             await this.WriteLineAsync(SmtpStatus.FailedParsingRcpt);
             return;
         }
-        (this.to ??= new List<string>()).Add(parsed);
+        (this.to ??= new ()).Add(parsed);
         await smtpReceiver.RcptToAsync(this, parsed);
         await this.WriteLineAsync("250 2.1.5 OK");
     }
@@ -321,18 +323,18 @@ public class SmtpServerClient : IDisposable
         this.reader = new AsyncSocketReader(this.stream);
         if (client.Client.RemoteEndPoint is IPEndPoint ip)
         {
-            this.remoteAddress = ip.Address.ToString().Replace("::ffff:", "");
+            this.RemoteIPAddress = ip.Address.ToString().Replace("::ffff:", "");
             try
             {
                 var r = await Dns.GetHostEntryAsync(ip.Address);
                 if (!string.IsNullOrEmpty(r?.HostName))
                 {
-                    this.clientHostName = r.HostName;
+                    this.ReverseDnsName = r.HostName;
                 }
             }
             catch (Exception ex)
             {
-                this.clientHostName = this.remoteAddress;
+                this.ReverseDnsName = this.RemoteIPAddress;
                 logger.LogError(ex);
             }
         }

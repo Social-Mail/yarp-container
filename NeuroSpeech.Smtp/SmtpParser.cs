@@ -1,10 +1,11 @@
-﻿using System;
+﻿using MimeKit;
+using System;
 
 namespace NeuroSpeech.Smtp;
 
 public class SmtpParser
 {
-    internal static string? ParseAddress(string arg)
+    internal static MailboxAddress ParseAddress(string arg)
     {
         var smtpUTF8 = false;
         var address = arg;
@@ -18,7 +19,6 @@ public class SmtpParser
             address = address.Trim();
         }
 
-
-        return address;
+        return MimeKit.MailboxAddress.Parse(address);
     }
 }

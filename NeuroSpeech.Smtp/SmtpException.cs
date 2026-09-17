@@ -24,6 +24,25 @@ public readonly struct SmtpStatus
         return status.ToString();
     }
 
+    public static SmtpStatus MailFromOk => new SmtpStatus(250, "2.1.5", "OK");
+
+    public static SmtpStatus RcptOk => new SmtpStatus(250, "2.1.5", "OK");
+
+    public static SmtpStatus DataOk => new SmtpStatus(250, "2.1.5", "OK");
+
+    public static SmtpStatus MailboxUnavailable = new SmtpStatus(550, "5.1.1", "Mailbox unavailable");
+
+    public static SmtpStatus InsufficientStorage = new SmtpStatus(550, "5.2.2", "Mailbox full");
+
+    public static SmtpStatus UnknownFailure(string text) {
+            if(text.Length > 200)
+                    {
+                        text = text.Substring(0, 200);
+                    }
+        text = text.Replace('\n', ' ').Replace('\r', ' ');
+        return new SmtpStatus(421, "4.3.2", "Unknown failure " + text);
+    }
+
     public static SmtpStatus FailedParsingMailFrom => (501, "5.1.7", "Failed to parse MAIL FROM address");
 
     public static SmtpStatus FailedParsingRcpt => (501, "5.1.3", "Failed to parse RCPT address");

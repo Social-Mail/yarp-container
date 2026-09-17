@@ -86,6 +86,7 @@ try
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
     builder.Services.AddSmtpServer();
+    builder.Services.AddSingleton<ISmtpReceiver, SmtpWebProxy>();
     builder.Services.AddSingleton<JsonLogger>();
     builder.Services.AddSingleton<CertificateStore>();
     builder.Services.AddSingleton<TlsContext>();
