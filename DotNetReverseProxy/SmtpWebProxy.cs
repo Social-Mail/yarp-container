@@ -32,6 +32,8 @@ public class SmtpWebProxy : ISmtpReceiver
     private readonly JsonLogger logger;
     private Dictionary<string, List<MailRecipientGroup>> recipientGroups = new ();
 
+    private string connectUrl(string domain, string path) => $"http://{domain}/social-mail/v2/smtp/in/{path}";
+
     public SmtpWebProxy(ReverseHostFinder hostFinder, JsonLogger logger)
     {
         this.httpClient = new HttpClient(new SocketsHttpHandler
@@ -55,7 +57,7 @@ public class SmtpWebProxy : ISmtpReceiver
             foreach (var g in recipientGroups)
             {
                 using var s = System.IO.File.OpenRead(file);
-                var response = await RequestBuilder.Post($"http://{g.Key}/social-mail/v2/local/data")
+                var response = await RequestBuilder.Post(connectUrl(g.Key, "data"))
                     .Multipart("helo", client.HeloHostName)
                     .Multipart("reverseDns", client.ReverseDnsName)
                     .Multipart("remoteIPAddress", client.RemoteIPAddress)
@@ -103,7 +105,7 @@ public class SmtpWebProxy : ISmtpReceiver
     {
         try
         {
-            var response = await RequestBuilder.Post($"http://{to.Domain}/social-mail/v2/local/rcpt")
+            var response = await RequestBuilder.Post(connectUrl(to.Domain, "rcpt"))
                 .Body(new {
                     remoteIPAddress = client.RemoteIPAddress,
                     reverseDnsName =  client.ReverseDnsName,
