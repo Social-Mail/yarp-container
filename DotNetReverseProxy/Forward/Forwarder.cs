@@ -13,6 +13,7 @@ using DotNetReverseProxy.HostLookup;
 using DotNetReverseProxy.RateLimiter;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
+using NeuroSpeech;
 using NeuroSpeech.Acme;
 using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.Transforms;

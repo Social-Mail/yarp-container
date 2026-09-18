@@ -1,5 +1,6 @@
 ﻿using DotNetReverseProxy.HostLookup;
 using MimeKit;
+using NeuroSpeech;
 using NeuroSpeech.Smtp;
 using RetroCoreFit;
 using System;
