@@ -9,6 +9,7 @@ using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using DotNetReverseProxy.Forward;
 using DotNetReverseProxy.HostLookup;
 using DotNetReverseProxy.RateLimiter;
 using Microsoft.AspNetCore.Http;
@@ -27,6 +28,7 @@ public class Forwarder: IMiddleware
     private readonly IHttpForwarder forwarder;
     private readonly ForwarderRequestConfig requestOptions;
     private readonly HttpMessageInvoker client;
+    private readonly SecurityHeaderForwarder st;
     private readonly ReverseHostFinder hostFinder;
     private readonly JsonLogger logger;
     private readonly ConcurrentIPCache ipCache;
@@ -61,6 +63,7 @@ public class Forwarder: IMiddleware
             ConnectTimeout = TimeSpan.FromSeconds(15),
             ConnectCallback = hostFinder.ConnectAsync
         });
+        this.st = new SecurityHeaderForwarder();
     }
 
 
@@ -103,31 +106,7 @@ public class Forwarder: IMiddleware
         }
 
 
-        var error = await forwarder.SendAsync(httpContext, "http://" + request.Headers.Host, client, requestOptions,
-            (context, proxyRequest) =>
-            {
-                var responseHeaders = context.Response.Headers;
-                responseHeaders.TryAdd("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
-                responseHeaders.TryAdd("X-Content-Type-Options", "nosniff");
-                responseHeaders.TryAdd("X-Frame-Options", "SAMEORIGIN");
-                responseHeaders.TryAdd("Referrer-Policy", "same-origin");
-
-
-                proxyRequest.Headers.Remove("x-forwarded-for");
-
-                // Customize the query string:
-                var queryContext = new QueryTransformContext(context.Request);
-                var ip = context.Connection.RemoteIpAddress;
-                if (ip != null)
-                {
-                    proxyRequest.Headers.TryAddWithoutValidation("x-forwarded-for", ip.ToString());
-                }
-
-                // Assign the custom uri. Be careful about extra slashes when concatenating here. RequestUtilities.MakeDestinationAddress is a safe default.
-                proxyRequest.RequestUri = RequestUtilities.MakeDestinationAddress("http://" + proxyRequest.Headers.Host, context.Request.Path, queryContext.QueryString);
-                proxyRequest.Version = HttpVersion.Version11;
-                return default;
-            });
+        var error = await forwarder.SendAsync(httpContext, "http://" + request.Headers.Host, client, requestOptions,st);
 
 
         Exception? exception = null;
@@ -139,10 +118,6 @@ public class Forwarder: IMiddleware
             if (errorFeature != null)
             {
                 exception = errorFeature.Exception;
-                // no need to log as RegisterStatus will report the error
-                //if (exception != null)
-                //{
-                //}
             }
         }
 
