@@ -88,10 +88,15 @@ public class SmtpClient: IDisposable
     {
         await stream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(command + "\r\n"));
 
+        return await ReadStatus(ensureSuccess);
+    }
+
+    public async Task<SmtpCommandResponse> ReadStatus(bool ensureSuccess = true)
+    {
         var r = await SmtpCommandResponse.Parse(() => reader.ReadLineAsync());
-        if(ensureSuccess)
+        if (ensureSuccess)
         {
-            if(r.Status >= 400)
+            if (r.Status >= 400)
             {
                 throw new InvalidOperationException($"{r.Status} {r.Message}");
             }

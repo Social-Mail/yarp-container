@@ -47,6 +47,8 @@ public class ForwardSmtpReceiver : ISmtpReceiver
                 await oc.WriteLineAsync(line);
             }
             await oc.WriteLineAsync(".");
+
+            await oc.ReadStatus();
         }));
 
         this.clients.Clear();
