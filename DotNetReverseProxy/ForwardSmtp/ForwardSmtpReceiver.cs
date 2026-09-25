@@ -36,17 +36,20 @@ public class ForwardSmtpReceiver : ISmtpReceiver
 
         await Task.WhenAll(this.clients.Select(async (x) => {
             using var s = System.IO.File.OpenRead(file);
+            using var oc = x.Value;
             await foreach (var line in FileLineReader.ReadLinesAsync(s))
             {
                 if(line.StartsWith("."))
                 {
-                    await x.Value.WriteLineAsync("." + line);
+                    await oc.WriteLineAsync("." + line);
                     continue;
                 }
-                await x.Value.WriteLineAsync(line);
+                await oc.WriteLineAsync(line);
             }
-            await x.Value.WriteLineAsync(".");
+            await oc.WriteLineAsync(".");
         }));
+
+        this.clients.Clear();
 
         return SmtpStatus.DataOk;
     }

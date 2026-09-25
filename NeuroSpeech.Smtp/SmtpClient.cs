@@ -6,7 +6,7 @@ using System.Text.Json;
 
 namespace NeuroSpeech.Smtp;
 
-public class SmtpClient
+public class SmtpClient: IDisposable
 {
 
     private static void ConsoleJsonLogger(string text)
@@ -102,5 +102,17 @@ public class SmtpClient
     public async Task WriteLineAsync(string v)
     {
         await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes(v));
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            stream?.Dispose();
+            stream = null;
+        } catch
+        {
+
+        }
     }
 }
