@@ -314,6 +314,7 @@ public class SmtpServerClient : IDisposable
     {
         var buf = System.Text.Encoding.ASCII.GetBytes(v + "\r\n");
         await this.stream!.WriteAsync(buf);
+        await this.stream.FlushAsync();
     }
 
     private async Task ResolveRemoteIP(TcpClient client)
