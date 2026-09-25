@@ -34,7 +34,7 @@ public class JsonLogger {
         console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
         {
             error = item.Message,
-            details = error.ToString()
+            details = item.ToString()
         }, options));
     }
 
@@ -46,7 +46,7 @@ public class JsonLogger {
     {
         error.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { 
             error = item.Message,
-            details = error.ToString()
+            details = item.ToString()
         }, options));
     }
 

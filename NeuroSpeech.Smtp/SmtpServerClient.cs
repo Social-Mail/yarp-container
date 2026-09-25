@@ -262,7 +262,7 @@ public class SmtpServerClient : IDisposable
                     await this.SendResponse(250, $"Hello { (tokens.Length > 1 ? tokens[1] : "localhost")}");
                     break;
                 case "EHLO":
-                    await this.WriteLineAsync("250-OK\n250-REQUIRETLS\n250-STARTTLS\n250 OK");
+                    await this.WriteLineAsync("250-OK\r\n250-REQUIRETLS\r\n250-STARTTLS\r\n250 OK");
                     break;
                 case "QUIT":
                     await this.Destroy();
