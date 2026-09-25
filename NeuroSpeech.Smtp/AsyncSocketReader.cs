@@ -47,8 +47,8 @@ public class AsyncSocketReader
             if(index == -1)
             {
                 lineBuffer = !lineBuffer.IsEmpty
-                    ? lineBuffer.Add(peek.Slice(0, index))
-                    : peek.Slice(0,index)
+                    ? lineBuffer.Add(peek)
+                    : peek
                     ;
                 this.ClearPeek();
                 continue;
