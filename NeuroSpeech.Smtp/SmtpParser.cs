@@ -19,7 +19,7 @@ public class SmtpParser
             address = address.Trim();
         }
 
-        address = address.Trim('<', '>');
+        address = address.Trim().Trim('<', '>');
 
         return MimeKit.MailboxAddress.Parse(address);
     }
