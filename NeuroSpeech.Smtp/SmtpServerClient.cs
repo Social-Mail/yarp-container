@@ -50,7 +50,11 @@ public class SmtpServerClient : IDisposable
 
     public void Dispose()
     {
-        
+        try
+        {
+            client?.Dispose();
+            client = null;
+        } catch { }
     }
 
     internal async Task RunAsync(TcpClient client)
