@@ -153,10 +153,10 @@ public class SmtpServerClient : IDisposable
                 {
                     break;
                 }
-                await System.IO.File.AppendAllTextAsync(file, line.AsMemory().Slice(1));
+                await System.IO.File.AppendAllTextAsync(file, $"{line.Substring(1)}\r\n");
                 continue;
             }
-            await System.IO.File.AppendAllTextAsync(file, line);
+            await System.IO.File.AppendAllTextAsync(file, line + "\r\n");
         }
 
         await smtpReceiver.DataAsync(this, this.From, this.to, file);

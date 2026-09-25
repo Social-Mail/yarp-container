@@ -1,6 +1,7 @@
 ﻿using Amazon.Runtime.Internal.Util;
 using DotNetReverseProxy;
 using DotNetReverseProxy.Forward;
+using DotNetReverseProxy.ForwardSmtp;
 using DotNetReverseProxy.HostLookup;
 using DotNetReverseProxy.Tls;
 using Microsoft.AspNetCore.Builder;
@@ -87,12 +88,13 @@ try
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
     builder.Services.AddSmtpServer();
-    builder.Services.AddSingleton<ISmtpReceiver, SmtpWebProxy>();
+    builder.Services.AddSingleton<ISmtpReceiver, ForwardSmtpReceiver>();
     builder.Services.AddSingleton<JsonLogger>();
     builder.Services.AddSingleton<CertificateStore>();
     builder.Services.AddSingleton<TlsContext>();
     builder.Services.AddSingleton<CertificateInstaller>();
     builder.Services.AddSingleton<ReverseHostFinder>();
+    builder.Services.AddSingleton<SmtpHostFinder>();
     builder.Services.AddResponseCompression((options) =>
     {
         options.EnableForHttps = true;
