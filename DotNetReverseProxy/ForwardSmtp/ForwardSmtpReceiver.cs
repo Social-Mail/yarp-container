@@ -38,6 +38,9 @@ public class ForwardSmtpReceiver : ISmtpReceiver
 
             using var oc = x.Value;
             await oc.SendCommand("DATA");
+            logger.Log(new {
+                data = "sending"
+            });
 
             using var s = System.IO.File.OpenRead(file);
             await foreach (var line in FileLineReader.ReadLinesAsync(s))
