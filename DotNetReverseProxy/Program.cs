@@ -123,6 +123,11 @@ try
     app.UseMiddleware<Forwarder>();
 
     var s = app.Services.GetRequiredService<SmtpServer>();
+    s.DisableSpfCheck = System.Text.RegularExpressions.Regex.IsMatch(
+            Environment.GetEnvironmentVariable("FORWARD_SMTP_DISABLE_SPF") ?? "",
+            "(yes|true)",
+            System.Text.RegularExpressions.RegexOptions.IgnoreCase
+         );
     s.Start();
 
     app.Run();

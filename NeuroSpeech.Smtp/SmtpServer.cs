@@ -11,6 +11,8 @@ public class SmtpServer
     private readonly IServiceProvider services;
     private TcpListener? server;
 
+    public bool DisableSpfCheck = false;
+
     public SmtpServer(JsonLogger logger, IServiceProvider services)
     {
         this.logger = logger;
@@ -59,7 +61,7 @@ public class SmtpServer
         {
             using var scope = services.CreateScope();
             using var ssClient = scope.ServiceProvider.GetRequiredService<SmtpServerClient>();
-
+            ssClient.DisableSpfCheck = this.DisableSpfCheck;
             await ssClient.RunAsync(client);
         }
         catch (Exception ex)

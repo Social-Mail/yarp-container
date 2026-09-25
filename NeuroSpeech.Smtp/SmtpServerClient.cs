@@ -47,6 +47,7 @@ public class SmtpServerClient : IDisposable
     private List<MailboxAddress>? to;
     public string HeloHostName { get; private set; }
     private object maxMessageSize;
+    internal bool DisableSpfCheck;
 
     public void Dispose()
     {
@@ -214,17 +215,21 @@ public class SmtpServerClient : IDisposable
             return;
         }
 
-        // verify SPF first...
-        var error = await spfVerificationService.VerifyAsync(
-            this.From.ToString(),
-            this.RemoteIPAddress,
-            this.HeloHostName,
-            this.ReverseDnsName);
-
-        if (error!=null)
+        if (!this.DisableSpfCheck)
         {
-            await this.WriteLineAsync(error);
-            return;
+
+            // verify SPF first...
+            var error = await spfVerificationService.VerifyAsync(
+                this.From.ToString(),
+                this.RemoteIPAddress,
+                this.HeloHostName,
+                this.ReverseDnsName);
+
+            if (error != null)
+            {
+                await this.WriteLineAsync(error);
+                return;
+            }
         }
 
         var status = await smtpReceiver.MailFromAsync(this, this.From);
