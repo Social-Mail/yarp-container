@@ -179,7 +179,7 @@ public class SmtpServerClient : IDisposable
                             "250-ENHANCEDSTATUSCODES",
                             "250 OK"
                         };
-        await this.WriteLineAsync(string.Join("\n", features));
+        await this.WriteLineAsync(string.Join("\r\n", features));
     }
 
     private async Task CommandHELO(string arg)
