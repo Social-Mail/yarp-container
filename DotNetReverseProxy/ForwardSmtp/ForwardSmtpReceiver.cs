@@ -12,7 +12,7 @@ namespace DotNetReverseProxy.ForwardSmtp;
 public class ForwardSmtpReceiver : ISmtpReceiver
 {
     private readonly JsonLogger logger;
-    private readonly ReverseHostFinder hostFinder;
+    private readonly SmtpHostFinder hostFinder;
 
     private readonly Dictionary<string, SmtpClient> clients = new Dictionary<string, NeuroSpeech.Smtp.SmtpClient>();
 
@@ -20,7 +20,7 @@ public class ForwardSmtpReceiver : ISmtpReceiver
 
     public ForwardSmtpReceiver(
         JsonLogger logger,
-        ReverseHostFinder hostFinder
+        SmtpHostFinder hostFinder
     )
     {
         this.logger = logger;
