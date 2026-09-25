@@ -120,6 +120,16 @@ public class BaseHostFinder
             disposable = null;
             return new NetworkStream(socket, true);
         }
+        catch (Exception ex)
+        {
+            logger.Log(new
+            {
+                action = "failed",
+                url = endPoint.ToString(),
+                details = ex.ToString()
+            });
+            throw;
+        }
         finally
         {
             disposable?.Dispose();
@@ -136,6 +146,16 @@ public class BaseHostFinder
             await socket.ConnectAsync(endPoint, cancellationToken).ConfigureAwait(false);
             disposable = null;
             return new NetworkStream(socket, true);
+        }
+        catch (Exception ex)
+        {
+            logger.Log(new
+            {
+                action = "failed",
+                url = endPoint.ToString(),
+                details = ex.ToString()
+            });
+            throw;
         }
         finally
         {
