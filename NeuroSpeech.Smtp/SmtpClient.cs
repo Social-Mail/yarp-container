@@ -87,7 +87,6 @@ public class SmtpClient: IDisposable
     public async Task<SmtpCommandResponse> SendCommand(string command, bool ensureSuccess = true)
     {
         await stream.WriteAsync(System.Text.Encoding.UTF8.GetBytes(command + "\r\n"));
-        await stream.FlushAsync();
 
         return await ReadStatus(ensureSuccess);
     }
@@ -107,7 +106,7 @@ public class SmtpClient: IDisposable
 
     public async Task WriteLineAsync(string v)
     {
-        await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes(v));
+        await stream.WriteAsync(System.Text.Encoding.ASCII.GetBytes(v + "\r\n"));
     }
 
     public void Dispose()
