@@ -29,8 +29,25 @@ public class JsonLogger {
         console.WriteLine(System.Text.Json.JsonSerializer.Serialize<T>(item, options));
     }
 
+    public void Log(Exception item)
+    {
+        console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            error = item.Message,
+            details = error.ToString()
+        }, options));
+    }
+
     public void LogError<T>(T item) {
         error.WriteLine(System.Text.Json.JsonSerializer.Serialize<T>(item, options));
+    }
+
+    public void LogError(Exception item)
+    {
+        error.WriteLine(System.Text.Json.JsonSerializer.Serialize(new { 
+            error = item.Message,
+            details = error.ToString()
+        }, options));
     }
 
 }
