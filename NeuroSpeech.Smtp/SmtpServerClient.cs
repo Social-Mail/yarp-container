@@ -125,6 +125,7 @@ public class SmtpServerClient : IDisposable
                     break;
                 }
 
+                await WriteLineAsync("440 Unknown Command");
 
             }
 
