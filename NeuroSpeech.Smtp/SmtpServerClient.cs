@@ -79,58 +79,67 @@ public class SmtpServerClient : IDisposable
         {
             while (this.shouldContinue)
             {
-                var line = await reader.ReadLineAsync();
-
-                if (line == null)
+                try
                 {
-                    return;
-                }
+                    var line = await reader.ReadLineAsync();
 
-                string arg = "";
+                    if (line == null)
+                    {
+                        return;
+                    }
 
-                if (line.IfStartsWith("RCPT TO:", out arg))
+                    string arg = "";
+
+                    if (line.IfStartsWith("RCPT TO:", out arg))
+                    {
+                        await this.CommandRCPT(arg);
+                        continue;
+                    }
+
+                    if (line.IfStartsWith("MAIL FROM:", out arg))
+                    {
+                        await this.CommandMailFrom(arg);
+                        continue;
+                    }
+
+                    if (line.IfStartsWith("RSET", out arg))
+                    {
+                        await this.CommandRSET();
+                        continue;
+                    }
+
+                    if (line.IfStartsWith("HELO", out arg))
+                    {
+                        await CommandHELO(arg);
+                        continue;
+                    }
+
+                    if (line.IfStartsWith("EHLO", out arg))
+                    {
+                        await CommandEHLO(arg);
+                        continue;
+                    }
+
+                    if (line.IfStartsWith("DATA", out arg))
+                    {
+                        await CommandData(arg);
+                        continue;
+                    }
+
+                    if (line.IfStartsWith("QUIT", out arg))
+                    {
+                        this.shouldContinue = false;
+                        break;
+                    }
+
+                    await WriteLineAsync("440 Unknown Command");
+                } catch (SmtpException ex)
                 {
-                    await this.CommandRCPT(arg);
-                    continue;
+                    var line = ex.ExtendedStatus != null
+                        ? $"{ex.Status} {ex.ExtendedStatus} {ex.Message}"
+                        : $"{ex.Status} {ex.Message}";
+                    await WriteLineAsync(line);
                 }
-
-                if (line.IfStartsWith("MAIL FROM:", out arg))
-                {
-                    await this.CommandMailFrom(arg);
-                    continue;
-                }
-
-                if(line.IfStartsWith("RSET", out arg))
-                {
-                    await this.CommandRSET();
-                    continue;
-                }
-
-                if(line.IfStartsWith("HELO", out arg))
-                {
-                    await CommandHELO(arg);
-                    continue;
-                }
-
-                if (line.IfStartsWith("EHLO", out arg))
-                {
-                    await CommandEHLO(arg);
-                    continue;
-                }
-
-                if (line.IfStartsWith("DATA", out arg))
-                {
-                    await CommandData(arg);
-                    continue;
-                }
-
-                if (line.IfStartsWith("QUIT", out arg))
-                {
-                    this.shouldContinue = false;
-                    break;
-                }
-
-                await WriteLineAsync("440 Unknown Command");
 
             }
 

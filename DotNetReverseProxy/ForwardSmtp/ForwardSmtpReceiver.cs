@@ -73,7 +73,7 @@ public class ForwardSmtpReceiver : ISmtpReceiver
             outClient = await CreateNewClient(domain, client);
             clients[domain] = outClient;
         }
-        var s = await outClient.SendCommand($"RCPT TO:<{to.ToString()}>");
+        var s = await outClient.SendCommand($"RCPT TO:<{to.ToString()}>", false);
         return new SmtpStatus(s.Status, s.ExtendedStatus, s.Message);
     }
 

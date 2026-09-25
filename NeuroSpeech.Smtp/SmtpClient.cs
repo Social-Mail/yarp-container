@@ -98,7 +98,7 @@ public class SmtpClient: IDisposable
         {
             if (r.Status >= 400)
             {
-                throw new InvalidOperationException($"{r.Status} {r.Message}");
+                throw new SmtpException(r.Status, r.Message, r.ExtendedStatus);
             }
         }
         return r;
@@ -120,4 +120,17 @@ public class SmtpClient: IDisposable
 
         }
     }
+}
+
+public class SmtpException: Exception
+{
+
+    public SmtpException(int code, string message, string? extendedCode = default): base(message)
+    {
+        this.Status = code;
+        this.ExtendedStatus = extendedCode;
+    }
+
+    public int Status { get; }
+    public string? ExtendedStatus { get; }
 }
