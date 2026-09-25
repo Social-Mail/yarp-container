@@ -28,6 +28,12 @@ public class SmtpResponseParserTests
         Assert.Null(m.ExtendedStatus);
         Assert.Equal("SMTPUTF8", m.Options);
 
+        m = SmtpCommandResponseCode.Parse("354 Start mail input; end with <CR><LF>.<CR><LF>");
+        Assert.Equal(354, m.Status);
+        Assert.Equal("Start mail input; end with <CR><LF>.<CR><LF>", m.Message);
+        Assert.Null(m.ExtendedStatus);
+        Assert.Null(m.Options);
+
 
     }
 

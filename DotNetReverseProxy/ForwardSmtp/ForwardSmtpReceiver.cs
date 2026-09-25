@@ -35,8 +35,11 @@ public class ForwardSmtpReceiver : ISmtpReceiver
     {
 
         await Task.WhenAll(this.clients.Select(async (x) => {
-            using var s = System.IO.File.OpenRead(file);
+
             using var oc = x.Value;
+            await oc.SendCommand("DATA");
+
+            using var s = System.IO.File.OpenRead(file);
             await foreach (var line in FileLineReader.ReadLinesAsync(s))
             {
                 if(line.StartsWith("."))
