@@ -28,6 +28,10 @@ public class AsyncSocketReader
                 this.SetPeek(next);
             }
 
+            if(!this.peek.HasValue)
+            {
+                throw new InvalidOperationException("Socket closed");
+            }
             var peek = this.peek!.Value;
 
             // lets handle broken new line first...

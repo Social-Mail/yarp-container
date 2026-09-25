@@ -38,9 +38,6 @@ public class ForwardSmtpReceiver : ISmtpReceiver
 
             using var oc = x.Value;
             await oc.SendCommand("DATA");
-            logger.Log(new {
-                data = "sending"
-            });
 
             using var s = System.IO.File.OpenRead(file);
             await foreach (var line in FileLineReader.ReadLinesAsync(s))
@@ -82,11 +79,21 @@ public class ForwardSmtpReceiver : ISmtpReceiver
 
     private async Task<SmtpClient> CreateNewClient(string domain, SmtpServerClient client)
     {
+        logger.Log(new
+        {
+            connecting = true,
+            domain
+        });
         var factory = this.hostFinder.GetPort(domain);
         var s = await factory(default);
 
         var outClient = new SmtpClient((text) => Console.WriteLine(text));
         await outClient.ConnectAsync(s);
+
+        logger.Log(new {
+            connected = true,
+            domain
+        });
 
         var r = await outClient.SendCommand($"EHLO {client.HeloHostName}");
 
