@@ -270,12 +270,12 @@ public class SmtpServerClient : IDisposable
                     break;
                 case "QUIT":
                     await this.Destroy();
-                    break;
+                    return;
                 case "STARTTLS":
                     await this.UpgradeAsServerTLS();
-                    break;
+                    return;
                 default:
-                    await WriteLineAsync("501 Please use STARTLS before any command");
+                    await WriteLineAsync("501 Please use STARTTLS before any command");
                     break;
             }
         }
