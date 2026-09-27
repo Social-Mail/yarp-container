@@ -26,8 +26,8 @@ public class BaseHostFinder
 
 
     public BaseHostFinder(JsonLogger logger,
-        string host,
         string protocol,
+        string host,
         string? key,
         string? forwardJsonFilePath)
     {
