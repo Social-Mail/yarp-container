@@ -256,6 +256,12 @@ public class SmtpServerClient : IDisposable
             if (error != null)
             {
                 await this.WriteLineAsync(error);
+                logger.Log(new
+                {
+                    smtp = "has-error",
+                    logs,
+                    error = error.ToString(),
+                });
                 return;
             }
         }

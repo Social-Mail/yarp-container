@@ -9,10 +9,12 @@ namespace NeuroSpeech.Smtp;
 public class SpfVerificationService
 {
     private readonly IMemoryCache cache;
+    private readonly JsonLogger logger;
 
-    public SpfVerificationService(IMemoryCache cache)
+    public SpfVerificationService(IMemoryCache cache, JsonLogger logger)
     {
         this.cache = cache;
+        this.logger = logger;
     }
 
     internal async Task<SmtpStatus?> VerifyAsync(
@@ -34,6 +36,12 @@ public class SpfVerificationService
 
         if(!v.Contains(remoteAddress))
         {
+            logger.LogError(new {
+                spf= "failed",
+                remoteAddress,
+                v.Domain,
+                ranges = v.IPRanges
+            });
             return SmtpStatus.SpfFailed();
         }
 
