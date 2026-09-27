@@ -50,7 +50,7 @@ public class SmtpServerClient : IDisposable
     private object maxMessageSize;
     internal bool DisableSpfCheck;
 
-    private StringBuilder session = new StringBuilder();
+    private List<string> logs = new List<string>();
 
     public void Dispose()
     {
@@ -86,7 +86,7 @@ public class SmtpServerClient : IDisposable
                 try
                 {
                     var line = await reader.ReadLineAsync();
-                    session.AppendLine(line);
+                    logs.Add(">> " + line);
 
                     if (line == null)
                     {
@@ -154,7 +154,7 @@ public class SmtpServerClient : IDisposable
                 logger.Log(new
                 {
                     smtp = "has-error",
-                    logs = session.ToString()
+                    logs
                 });
             }
             await this.Destroy();
@@ -164,7 +164,7 @@ public class SmtpServerClient : IDisposable
             logger.Log(new { 
                 error = ex.Message,
                 details = ex.ToString(),
-                logs = session.ToString()
+                logs
             });
             await this.Destroy();
         }
@@ -288,7 +288,7 @@ public class SmtpServerClient : IDisposable
         for(; ;)
         {
             var line = await reader.ReadLineAsync();
-            session.AppendLine(line);
+            logs.Add(">> " + line);
             if (string.IsNullOrEmpty(line))
             {
                 throw new InvalidOperationException($"Socket sent an empty line");
@@ -351,7 +351,7 @@ public class SmtpServerClient : IDisposable
 
     private async Task WriteLineAsync(string v)
     {
-        session.AppendLine(v);
+        logs.Add("<< " + v);
         var buf = System.Text.Encoding.ASCII.GetBytes(v + "\r\n");
         await this.stream!.WriteAsync(buf);
         await this.stream.FlushAsync();
