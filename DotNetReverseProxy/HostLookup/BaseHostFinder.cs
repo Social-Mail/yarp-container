@@ -17,18 +17,22 @@ namespace DotNetReverseProxy.HostLookup;
 public class BaseHostFinder
 {
     private readonly string Host;
+    private readonly string protocol;
     private readonly string? forwardJsonFilePath;
     private readonly Dictionary<string, Func<CancellationToken, ValueTask<Stream>>> ports = new();
     private readonly Func<CancellationToken, ValueTask<Stream>>? defaultEndPoint;
     private readonly JsonLogger logger;
     private EndPointHttpClient? forwardClient;
 
+
     public BaseHostFinder(JsonLogger logger,
         string host,
+        string protocol,
         string? key,
         string? forwardJsonFilePath)
     {
         this.Host = host;
+        this.protocol = protocol;
         this.forwardJsonFilePath = forwardJsonFilePath;
         if (key != null)
         {
@@ -165,7 +169,7 @@ public class BaseHostFinder
 
     private async ValueTask<Stream> ResolvePortAsync(string hostName, CancellationToken ct)
     {
-        var r = await this.forwardClient!.GetStringAsync("http://somewhere/fwd/" + hostName);
+        var r = await this.forwardClient!.GetStringAsync($"http://nowhere/{this.protocol}/{hostName}");
         var endPoint = ParseEndPoint(r);
         var factory = Factory(endPoint);
         return await factory(ct);

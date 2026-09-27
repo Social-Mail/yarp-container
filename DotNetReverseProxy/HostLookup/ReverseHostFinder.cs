@@ -18,6 +18,7 @@ public class ReverseHostFinder: BaseHostFinder
 {
     public ReverseHostFinder(JsonLogger logger): base(
         logger,
+        "http",
         System.Environment.GetEnvironmentVariable("FORWARD_HOST") ?? "0.0.0.0",
         System.Environment.GetEnvironmentVariable("FORWARD_PORT"),
         System.Environment.GetEnvironmentVariable("FORWARD_JSON")
@@ -31,10 +32,12 @@ public class SmtpHostFinder: BaseHostFinder
     public SmtpHostFinder(JsonLogger logger)
         : base(
         logger,
+        "smtp",
         System.Environment.GetEnvironmentVariable("FORWARD_SMTP_HOST") ?? "0.0.0.0",
         System.Environment.GetEnvironmentVariable("FORWARD_SMTP_PORT"),
         System.Environment.GetEnvironmentVariable("FORWARD_SMTP_JSON"))
     {
         
     }
+
 }
