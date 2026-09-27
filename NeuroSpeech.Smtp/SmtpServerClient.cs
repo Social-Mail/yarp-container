@@ -7,6 +7,7 @@ using System.IO;
 using System.Net;
 using System.Net.Security;
 using System.Net.Sockets;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace NeuroSpeech.Smtp;
@@ -49,6 +50,8 @@ public class SmtpServerClient : IDisposable
     private object maxMessageSize;
     internal bool DisableSpfCheck;
 
+    private StringBuilder session = new StringBuilder();
+
     public void Dispose()
     {
         try
@@ -75,6 +78,7 @@ public class SmtpServerClient : IDisposable
         }
 
         this.shouldContinue = true;
+        var logOnConsole = false;
         try
         {
             while (this.shouldContinue)
@@ -82,6 +86,7 @@ public class SmtpServerClient : IDisposable
                 try
                 {
                     var line = await reader.ReadLineAsync();
+                    session.AppendLine(line);
 
                     if (line == null)
                     {
@@ -135,6 +140,7 @@ public class SmtpServerClient : IDisposable
                     await WriteLineAsync("440 Unknown Command");
                 } catch (SmtpException ex)
                 {
+                    logOnConsole = true;
                     var line = ex.ExtendedStatus != null
                         ? $"{ex.Status} {ex.ExtendedStatus} {ex.Message}"
                         : $"{ex.Status} {ex.Message}";
@@ -143,11 +149,23 @@ public class SmtpServerClient : IDisposable
 
             }
 
+            if(logOnConsole)
+            {
+                logger.Log(new
+                {
+                    smtp = "has-error",
+                    logs = session.ToString()
+                });
+            }
             await this.Destroy();
         }
         catch (Exception ex)
         {
-            logger.LogError(ex);
+            logger.Log(new { 
+                error = ex.Message,
+                details = ex.ToString(),
+                logs = session.ToString()
+            });
             await this.Destroy();
         }
 
@@ -270,6 +288,7 @@ public class SmtpServerClient : IDisposable
         for(; ;)
         {
             var line = await reader.ReadLineAsync();
+            session.AppendLine(line);
             if (string.IsNullOrEmpty(line))
             {
                 throw new InvalidOperationException($"Socket sent an empty line");
@@ -332,6 +351,7 @@ public class SmtpServerClient : IDisposable
 
     private async Task WriteLineAsync(string v)
     {
+        session.AppendLine(v);
         var buf = System.Text.Encoding.ASCII.GetBytes(v + "\r\n");
         await this.stream!.WriteAsync(buf);
         await this.stream.FlushAsync();
