@@ -217,7 +217,8 @@ public class SmtpServerClient : IDisposable
             await this.WriteLineAsync(SmtpStatus.BadSequenceOfCommand);
             return;
         }
-        this.From = SmtpParser.ParseAddress(arg);
+        var a = SmtpParser.ParseAddress(arg);
+        this.From = a.address;
         if(this.From == null)
         {
             await this.WriteLineAsync(SmtpStatus.FailedParsingMailFrom);
@@ -254,13 +255,13 @@ public class SmtpServerClient : IDisposable
             return;
         }
         var parsed = SmtpParser.ParseAddress(arg);
-        if(parsed == null)
+        if(parsed.address == null)
         {
             await this.WriteLineAsync(SmtpStatus.FailedParsingRcpt);
             return;
         }
-        (this.to ??= new ()).Add(parsed);
-        await smtpReceiver.RcptToAsync(this, parsed);
+        (this.to ??= new ()).Add(parsed.address);
+        await smtpReceiver.RcptToAsync(this, parsed.address);
         await this.WriteLineAsync("250 2.1.5 OK");
     }
 
