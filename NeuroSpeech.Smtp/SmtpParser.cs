@@ -51,7 +51,7 @@ public class Tokenizer
 
     public void SkipWhitespace()
     {
-        while (char.IsWhiteSpace(text[start]))
+        while (!this.IsEmpty && char.IsWhiteSpace(text[start]))
         {
             start++;
         }
