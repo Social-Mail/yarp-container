@@ -6,12 +6,12 @@ public readonly struct SmtpStatus
 {
     public static SmtpStatus SpfFailed()
     {
-        return new SmtpStatus(550, "5.7.1", "Permanent rejection because the sending IP address is not authorized by the domain's SPF record.");
+        return new SmtpStatus(550, "5.7.1", "SPF Unauthorized IP. This server enforces strict SPF validation. Please contact your IT administrator to correct your domain's SPF record.");
     }
 
     public static SmtpStatus SpfNotDeclared()
     {
-        return new SmtpStatus(550, "5.7.26", "Permanent rejection because the sending IP address is not authorized by the domain's SPF record.");
+        return new SmtpStatus(550, "5.7.26", "Permanent rejection because the sending IP address is not authorized by the domain's SPF record. SPF record is undefined.");
     }
 
     public static implicit operator SmtpStatus((int code, string extendedCode, string message) x)
