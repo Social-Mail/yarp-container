@@ -4,9 +4,9 @@ namespace NeuroSpeech.Smtp;
 
 public readonly struct SmtpStatus
 {
-    public static SmtpStatus SpfFailed()
+    public static SmtpStatus SpfFailed(string ip)
     {
-        return new SmtpStatus(550, "5.7.1", "SPF Unauthorized IP. This server enforces strict SPF validation. Please contact your IT administrator to correct your domain's SPF record.");
+        return new SmtpStatus(550, "5.7.1", $"SPF Unauthorized IP {ip}. This server enforces strict SPF validation. Please contact your IT administrator to correct your domain's SPF record.");
     }
 
     public static SmtpStatus SpfNotDeclared()
