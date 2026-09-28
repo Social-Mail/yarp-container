@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Caching.Memory;
+using MimeKit;
 using NeuroSpeech.Smtp.Spf;
 using System;
 using System.Net;
@@ -18,17 +19,17 @@ public class SpfVerificationService
     }
 
     internal async Task<SmtpStatus?> VerifyAsync(
-        string from,
+        MailboxAddress from,
         string remoteAddress,
         string hostNameAppearsAs,
         string clientHostName)
     {
 
-        MimeKit.MailboxAddress address = MimeKit.MailboxAddress.Parse(from);
+        var domain = from.Domain.ToLower();
 
-        var spfKey = $"_spf_{address.Domain.ToLower()}";
+        var spfKey = $"_spf_{domain}";
 
-        var v = await cache.GetOrCreateAsync(spfKey, (x) => SpfValidator.Fetch(address.Domain));
+        var v = await cache.GetOrCreateAsync(spfKey, (x) => SpfValidator.Fetch(domain));
         if(v == null)
         {
             return SmtpStatus.SpfNotDeclared();

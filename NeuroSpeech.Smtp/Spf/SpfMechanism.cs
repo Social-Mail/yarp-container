@@ -9,7 +9,7 @@ public readonly struct SpfMechanism
     {
         input = input.Trim();
 
-        var r = new Regex("(?<mask>[\\+\\-\\~\\?])?(?<type>[a-z0-9]+)(\\:(?<value>[^\\/\\s]+))?(\\/(?<prefix>.+))?", RegexOptions.Compiled);
+        var r = new Regex("(?<mask>[\\+\\-\\~\\?])?(?<type>[a-z0-9]+)((\\:|\\=)(?<value>[^\\/\\s]+))?(\\/(?<prefix>.+))?", RegexOptions.Compiled);
 
         var match = r.Match(input);
 

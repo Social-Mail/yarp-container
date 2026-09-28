@@ -47,4 +47,14 @@ public class SpfUnitTests
         Assert.Fail();
     }
 
+
+
+    [Fact]
+    public async Task Resolve2()
+    {
+        var spf = await SpfValidator.Fetch("gmail.com");
+
+        Assert.True(spf.IPRanges.Any());
+    }
+
 }

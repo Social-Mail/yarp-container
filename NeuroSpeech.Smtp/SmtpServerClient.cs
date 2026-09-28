@@ -248,7 +248,7 @@ public class SmtpServerClient : IDisposable
 
             // verify SPF first...
             var error = await spfVerificationService.VerifyAsync(
-                this.From.ToString(),
+                this.From,
                 this.RemoteIPAddress,
                 this.HeloHostName,
                 this.ReverseDnsName);
@@ -260,6 +260,7 @@ public class SmtpServerClient : IDisposable
                 {
                     smtp = "has-error",
                     logs,
+                    RemoteIPAddress = this.RemoteIPAddress,
                     error = error.ToString(),
                 });
                 return;

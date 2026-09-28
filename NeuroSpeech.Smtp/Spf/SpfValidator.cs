@@ -85,6 +85,7 @@ public class SpfValidator
                 }
                 break;
             case "include":
+            case "redirect":
                 await this.ResolveDomainAsync(m.Value, list);
                 break;
             case "mx":
