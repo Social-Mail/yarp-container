@@ -9,26 +9,9 @@ namespace NeuroSpeech.Smtp;
 public class SmtpClient: IDisposable
 {
 
-    private static void ConsoleJsonLogger(string text)
-    {
-        Console.WriteLine(text);
-    }
-
-    public static async Task<SmtpClient> ConnectAsync(string unixPort, Action<string>? logger, CancellationToken cancellationToken = default)
-    {
-        logger ??= ConsoleJsonLogger;
-
-        var sc = new SmtpClient(logger);
-        await sc.ConnectAsync(unixPort, cancellationToken);
-
-        // do helo...
-
-        return sc;
-    }
-
     private Stream stream;
     private AsyncSocketReader reader;
-    private readonly Action<string> logger;
+    private readonly List<string> logger = new List<string>();
 
     private async ValueTask<Stream> UnixSocketFactory(
         UnixDomainSocketEndPoint unixPort,
@@ -61,12 +44,7 @@ public class SmtpClient: IDisposable
 
     private void jsonLog<T>(T message)
     {
-        this.logger(JsonSerializer.Serialize(message));
-    }
-
-    public SmtpClient(Action<string> logger)
-    {
-        this.logger = logger;
+        logger.Add(JsonSerializer.Serialize(message));
     }
 
     public async Task ConnectAsync(string unixPort, CancellationToken cancellationToken = default)

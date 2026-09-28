@@ -82,7 +82,7 @@ public class ForwardSmtpReceiver : ISmtpReceiver
         var factory = this.hostFinder.GetPort(domain);
         var s = await factory(default);
 
-        var outClient = new SmtpClient((text) => Console.WriteLine(text));
+        var outClient = new SmtpClient();
         await outClient.ConnectAsync(s);
 
         var r = await outClient.SendCommand($"EHLO {client.HeloHostName}");
