@@ -30,8 +30,7 @@ public class BaseHostFinder
         string protocol,
         string host,
         string? key,
-        string? forwardJsonFilePath,
-        string? queryHostNameRoute)
+        string? forwardJsonFilePath)
     {
         this.Host = host;
         this.protocol = protocol;
