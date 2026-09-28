@@ -18,6 +18,7 @@ public class BaseHostFinder
 {
     private readonly string Host;
     private readonly string protocol;
+    private readonly string? queryHostNameRoute;
     private readonly string? forwardJsonFilePath;
     private readonly Dictionary<string, Func<CancellationToken, ValueTask<Stream>>> ports = new();
     private readonly Func<CancellationToken, ValueTask<Stream>>? defaultEndPoint;
@@ -29,10 +30,16 @@ public class BaseHostFinder
         string protocol,
         string host,
         string? key,
-        string? forwardJsonFilePath)
+        string? forwardJsonFilePath,
+        string? queryHostNameRoute)
     {
         this.Host = host;
         this.protocol = protocol;
+        this.queryHostNameRoute = System.Environment.GetEnvironmentVariable("FORWARD_ROUTE");
+        if(this.queryHostNameRoute != null)
+        {
+            this.forwardClient = new EndPointHttpClient(ParseEndPoint(this.queryHostNameRoute));
+        }
         this.forwardJsonFilePath = forwardJsonFilePath;
         if (key != null)
         {
