@@ -144,6 +144,12 @@ public class CertificateStore
         // root cert only should be created for direct
         // IP mapping
         if(root == serverName) {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                error = "serverName is apex",
+                serverName,
+                root
+            }));
             return false;
         }
 
