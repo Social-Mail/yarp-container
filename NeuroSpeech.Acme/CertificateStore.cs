@@ -180,6 +180,12 @@ public class CertificateStore
                 to = cnameTo
             }));
         }
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            result = host,
+            from = cnameFrom,
+            to = cnameTo
+        }));
         return r;
     }
 
