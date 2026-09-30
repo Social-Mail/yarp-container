@@ -138,6 +138,11 @@ public class CertificateStore
         var root = await ApexDomainChecker.Instance.GetApexDomainAsync(serverName);
         if(root == null)
         {
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                error = "apex not found",
+                serverName
+            }));
             return false;
         }
 
