@@ -94,7 +94,6 @@ public class CertificateStore
 
             var certFileName = serverName;
             if (hasWildcardForwrd) {
-
                 certFileName = WildcardHelper.ReplaceAsFileName(serverName)!;
                 serverName = WildcardHelper.Replace(serverName);
             }
@@ -139,6 +138,12 @@ public class CertificateStore
         var root = await ApexDomainChecker.Instance.GetApexDomainAsync(serverName);
         if(root == null)
         {
+            return false;
+        }
+
+        // root cert only should be created for direct
+        // IP mapping
+        if(root == serverName) {
             return false;
         }
 

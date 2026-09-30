@@ -6,32 +6,24 @@ namespace NeuroSpeech.Acme;
 
 public class WildcardHelper
 {
-    private static readonly Regex wildCardReplacer;
-
-    static WildcardHelper()
-    {
-        string pattern = @"^([^.]*)\.(.*)$";
-        wildCardReplacer = new Regex(pattern, RegexOptions.Compiled);
-    }
-
     public static string? Replace(string hostName)
     {
-        if(!hostName.Contains("."))
+        var index = hostName.IndexOf('.');
+        if (index != -1)
         {
-            return null;
+            return hostName;
         }
-        string replacement = "*.$2";
-        return wildCardReplacer.Replace(hostName, replacement);
+        return "*." + hostName.Substring(index + 1);
     }
 
     public static string? ReplaceAsFileName(string hostName)
     {
-        if (!hostName.Contains("."))
+        var index = hostName.IndexOf('.');
+        if (index != -1)
         {
-            return null;
+            return hostName;
         }
-        string replacement = "$wildcard.$2";
-        return wildCardReplacer.Replace(hostName, replacement);
+        return "$wildcard." + hostName.Substring(index + 1);
     }
 
 }
