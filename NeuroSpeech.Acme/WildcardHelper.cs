@@ -9,7 +9,7 @@ public class WildcardHelper
     public static string? Replace(string hostName)
     {
         var index = hostName.IndexOf('.');
-        if (index != -1)
+        if (index == -1)
         {
             return hostName;
         }
@@ -19,7 +19,7 @@ public class WildcardHelper
     public static string? ReplaceAsFileName(string hostName)
     {
         var index = hostName.IndexOf('.');
-        if (index != -1)
+        if (index == -1)
         {
             return hostName;
         }
