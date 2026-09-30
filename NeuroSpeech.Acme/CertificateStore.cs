@@ -197,6 +197,16 @@ public class CertificateStore
     async Task<bool> Resolves(string serverName)
     {
         // this must verify the ip binding...
+        var host = await ClientX.QueryDns(serverName, DnsRecordType.A, DnsEndpoint.Cloudflare);
+        foreach (var answer in host.Answers)
+        {
+            foreach(var ipa in SelfIPs)
+            {
+                if(ipa.ToString() == answer.Data) {
+                    return true;
+                }
+            }
+        }
         var ip = await Dns.GetHostEntryAsync(serverName);
         foreach (var selfIp in SelfIPs)
         {
@@ -204,16 +214,6 @@ public class CertificateStore
             {
                 if (ipa.Equals(selfIp))
                 {
-                    return true;
-                }
-            }
-        }
-        var host = await ClientX.QueryDns(serverName, DnsRecordType.A, DnsEndpoint.Cloudflare);
-        foreach (var answer in host.Answers)
-        {
-            foreach(var ipa in SelfIPs)
-            {
-                if(ipa.ToString() == answer.Data) {
                     return true;
                 }
             }
