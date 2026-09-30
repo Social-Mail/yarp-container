@@ -136,7 +136,11 @@ public class CertificateStore
     {
 
         // we need to go up...
-        var root = WildcardHelper.GetTopLevel(serverName);
+        var root = await ApexDomainChecker.Instance.GetApexDomainAsync(serverName);
+        if(root == null)
+        {
+            return false;
+        }
 
         var cnameFrom = $"_acme-challenge." + root;
         var cnameTo = $"{root}{this.awsZoneSuffix}";

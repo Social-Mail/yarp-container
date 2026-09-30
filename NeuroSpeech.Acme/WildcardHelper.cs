@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Nager.PublicSuffix;
+using System;
 using System.Text.RegularExpressions;
 
 namespace NeuroSpeech.Acme;
@@ -33,13 +34,4 @@ public class WildcardHelper
         return wildCardReplacer.Replace(hostName, replacement);
     }
 
-    internal static string? GetTopLevel(string hostName)
-    {
-        if(!hostName.Contains("."))
-        {
-            return null;
-        }
-        string replacement = "$2";
-        return wildCardReplacer.Replace(hostName, replacement);
-    }
 }
