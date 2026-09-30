@@ -70,7 +70,12 @@ public class CertificateStore
         }
 
         try {
-            if (String.IsNullOrWhiteSpace(serverName) || !await Resolves(serverName))
+
+            bool hasWildcardForwrd = this.awsZoneSuffix != null && (await HasDnsForward(serverName));
+            
+            bool canIssueCertificate = hasWildcardForwrd || await Resolves(serverName);
+
+            if (String.IsNullOrWhiteSpace(serverName) || !canIssueCertificate)
             {
                 throw new InvalidOperationException($"{serverName} does not resolve to this server.");
                 // send self signed certificate...
@@ -88,13 +93,10 @@ public class CertificateStore
             using var _lock = await LockFile.LockAsync($"get-or-install-server-certificate-{serverName}");
 
             var certFileName = serverName;
-            if (this.awsZoneSuffix != null) {
-                if (await HasDnsForward(serverName))
-                {
+            if (hasWildcardForwrd) {
 
-                    certFileName = WildcardHelper.ReplaceAsFileName(serverName)!;
-                    serverName = WildcardHelper.Replace(serverName);
-                }
+                certFileName = WildcardHelper.ReplaceAsFileName(serverName)!;
+                serverName = WildcardHelper.Replace(serverName);
             }
 
             var installed = await installer.InstallCertificateAsync(serverName);
@@ -202,6 +204,16 @@ public class CertificateStore
             {
                 if (ipa.Equals(selfIp))
                 {
+                    return true;
+                }
+            }
+        }
+        var host = await ClientX.QueryDns(serverName, DnsRecordType.A, DnsEndpoint.Cloudflare);
+        foreach (var answer in host.Answers)
+        {
+            foreach(var ipa in SelfIPs)
+            {
+                if(ipa.ToString() == answer.Data) {
                     return true;
                 }
             }
