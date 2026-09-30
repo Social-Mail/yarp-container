@@ -175,6 +175,11 @@ public class BaseHostFinder
 
     private async ValueTask<Stream> ResolvePortAsync(string hostName, CancellationToken ct)
     {
+        if(!System.IO.File.Exists(queryHostNameRoute))
+        {
+            return await defaultEndPoint(ct);
+        }
+
         var r = await this.forwardClient!.GetStringAsync($"http://nowhere/{this.protocol}/{hostName}");
         var endPoint = ParseEndPoint(r);
         var factory = Factory(endPoint);
