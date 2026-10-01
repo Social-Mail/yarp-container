@@ -37,10 +37,12 @@ public class BaseHostFinder
         this.queryHostNameRoute = System.Environment.GetEnvironmentVariable("FORWARD_ROUTE");
         if(this.queryHostNameRoute != null)
         {
-            this.forwardClient = EndPointHttpClient.CreateEndPointHandler(ParseEndPoint(this.queryHostNameRoute));
+            var endPoint = ParseEndPoint(this.queryHostNameRoute);
+            this.forwardClient = EndPointHttpClient.CreateEndPointHandler(endPoint);
             logger.Log(new {
                 action= "Forward Route",
                 this.queryHostNameRoute,
+                endPoint = endPoint.GetType().Name + ":" + endPoint.ToString()
             });
         }
         this.forwardJsonFilePath = forwardJsonFilePath;
