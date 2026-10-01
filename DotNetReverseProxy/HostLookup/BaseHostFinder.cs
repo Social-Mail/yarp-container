@@ -20,7 +20,7 @@ public class BaseHostFinder
     private readonly string protocol;
     private readonly string? queryHostNameRoute;
     private readonly string? forwardJsonFilePath;
-    private readonly Dictionary<string, Func<CancellationToken, ValueTask<Stream>>> ports = new();
+    private Dictionary<string, Func<CancellationToken, ValueTask<Stream>>>? ports ;
     private readonly Func<CancellationToken, ValueTask<Stream>>? defaultEndPoint;
     private readonly JsonLogger logger;
     private EndPointHttpClient? forwardClient;
@@ -55,18 +55,21 @@ public class BaseHostFinder
         // restart
 
         hostName = hostName.ToLower();
-
-        if (this.ports.TryGetValue(hostName, out var port))
+        if (this.ports != null)
         {
-            return port;
-        }
 
-        var wildcard = WildcardHelper.Replace(hostName);
-        if (wildcard != null)
-        {
-            if (this.ports.TryGetValue(wildcard, out port))
+            if (this.ports.TryGetValue(hostName, out var port))
             {
                 return port;
+            }
+
+            var wildcard = WildcardHelper.Replace(hostName);
+            if (wildcard != null)
+            {
+                if (this.ports.TryGetValue(wildcard, out port))
+                {
+                    return port;
+                }
             }
         }
 
@@ -181,6 +184,11 @@ public class BaseHostFinder
         }
 
         var r = await this.forwardClient!.GetStringAsync($"http://nowhere/{this.protocol}/{hostName}");
+        logger.Log(new {
+            action = "route",
+            hostName,
+            socket = r
+        });
         var endPoint = ParseEndPoint(r);
         var factory = Factory(endPoint);
         return await factory(ct);
@@ -225,6 +233,8 @@ public class BaseHostFinder
             // parse json...
             return;
         }
+
+        this.ports = new ();
 
         using var fs = File.OpenRead(forwardJson);
 
