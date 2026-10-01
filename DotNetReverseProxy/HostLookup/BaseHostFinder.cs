@@ -55,6 +55,13 @@ public class BaseHostFinder
 
     public Func<CancellationToken, ValueTask<Stream>>? GetPort(string hostName)
     {
+
+        var index = hostName.IndexOf(':');
+        if(index != -1)
+        {
+            hostName = hostName.Substring(0, index);
+        }
+
         // for the case when cluster might support multiple virtual servers
         // this can query host
         // we should not cache this as cluster server may have recycled and might need
