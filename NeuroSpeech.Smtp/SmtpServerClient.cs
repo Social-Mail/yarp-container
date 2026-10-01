@@ -383,7 +383,10 @@ public class SmtpServerClient : IDisposable
             catch (Exception ex)
             {
                 this.ReverseDnsName = this.RemoteIPAddress;
-                logger.LogError(ex);
+                logger.LogError(new {
+                    error = ex.Message,
+                    ip = this.RemoteIPAddress
+                });
             }
         }
     }
