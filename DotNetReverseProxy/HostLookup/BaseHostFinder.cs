@@ -23,7 +23,7 @@ public class BaseHostFinder
     private Dictionary<string, Func<CancellationToken, ValueTask<Stream>>>? ports ;
     private readonly Func<CancellationToken, ValueTask<Stream>>? defaultEndPoint;
     private readonly JsonLogger logger;
-    private EndPointHttpClient? forwardClient;
+    private HttpClient? forwardClient;
 
 
     public BaseHostFinder(JsonLogger logger,
@@ -37,7 +37,7 @@ public class BaseHostFinder
         this.queryHostNameRoute = System.Environment.GetEnvironmentVariable("FORWARD_ROUTE");
         if(this.queryHostNameRoute != null)
         {
-            this.forwardClient = new EndPointHttpClient(ParseEndPoint(this.queryHostNameRoute));
+            this.forwardClient = EndPointHttpClient.CreateEndPointHandler(ParseEndPoint(this.queryHostNameRoute));
             logger.Log(new {
                 action= "Forward Route",
                 this.queryHostNameRoute,
@@ -187,7 +187,7 @@ public class BaseHostFinder
         //    return await defaultEndPoint(ct);
         //}
 
-        var r = await this.forwardClient!.GetStringAsync($"http://nowhere/{this.protocol}/{hostName}");
+        var r = await this.forwardClient!.GetStringAsync($"/{this.protocol}/{hostName}");
         //logger.Log(new {
         //    action = "route",
         //    hostName,
@@ -299,7 +299,7 @@ public class BaseHostFinder
             return;
         }
 
-        this.forwardClient = new EndPointHttpClient(forwardEndPoint);
+        this.forwardClient = EndPointHttpClient.CreateEndPointHandler(forwardEndPoint);
     }
 
     internal ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext context, CancellationToken token)

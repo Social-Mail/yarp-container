@@ -4,17 +4,17 @@ using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
 
-public class EndPointHttpClient : HttpClient
+public class EndPointHttpClient
 {
-    public EndPointHttpClient(EndPoint endpoint) : base(CreateEndPointHandler(endpoint))
-    {
-    }
+    //public EndPointHttpClient(EndPoint endpoint) : base(CreateEndPointHandler(endpoint))
+    //{
+    //}
 
-    private static SocketsHttpHandler CreateEndPointHandler(EndPoint endpoint)
+    public static HttpClient CreateEndPointHandler(EndPoint endpoint)
     {
         if (endpoint is UnixDomainSocketEndPoint unix)
         {
-            return new SocketsHttpHandler
+            var handler = new SocketsHttpHandler
             {
                 AllowAutoRedirect = false,
                 AutomaticDecompression = DecompressionMethods.None,
@@ -33,12 +33,15 @@ public class EndPointHttpClient : HttpClient
                     }
                 }
             };
+            return new HttpClient(handler) {  BaseAddress = new System.Uri("http://localhost") };
         }
-        return new SocketsHttpHandler {
+
+        return new HttpClient(new SocketsHttpHandler {
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.None,
             UseCookies = false
-        };
+        })
+        { BaseAddress = new System.Uri("http://localhost") };
     }
 
 }
