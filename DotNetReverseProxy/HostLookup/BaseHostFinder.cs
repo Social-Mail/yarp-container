@@ -38,6 +38,10 @@ public class BaseHostFinder
         if(this.queryHostNameRoute != null)
         {
             this.forwardClient = new EndPointHttpClient(ParseEndPoint(this.queryHostNameRoute));
+            logger.Log(new {
+                action= "Forward Route",
+                this.queryHostNameRoute,
+            });
         }
         this.forwardJsonFilePath = forwardJsonFilePath;
         if (key != null)
