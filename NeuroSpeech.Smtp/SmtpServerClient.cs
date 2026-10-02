@@ -159,6 +159,11 @@ public class SmtpServerClient : IDisposable
             }
             await this.Destroy();
         }
+        catch( SocketClosedException)
+        {
+            // do nothing...
+            await this.Destroy();
+        }
         catch (Exception ex)
         {
             logger.Log(new { 
@@ -260,7 +265,7 @@ public class SmtpServerClient : IDisposable
                 {
                     smtp = "has-error",
                     logs,
-                    RemoteIPAddress = this.RemoteIPAddress,
+                    this.RemoteIPAddress,
                     error = error.ToString(),
                 });
                 return;
@@ -329,9 +334,15 @@ public class SmtpServerClient : IDisposable
 
     async Task Destroy()
     {
-        await this.WriteLineAsync("250 Closing Channel");
-        this.client?.Dispose();
-        this.client = null;
+        try
+        {
+            await this.WriteLineAsync("250 Closing Channel");
+            this.client?.Dispose();
+            this.client = null;
+        } catch
+        {
+            // do not log..
+        }
     }
 
     private async Task UpgradeAsServerTLS()

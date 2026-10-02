@@ -1,11 +1,6 @@
 ﻿using DnsClientX;
-using NeuroSpeech.Acme;
 using Microsoft.Extensions.Caching.Memory;
-using System;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Runtime.ConstrainedExecution;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -164,7 +159,7 @@ public class CertificateStore
 
 
         // check CNAME for wildcard...
-        var host = await ClientX.QueryDns(cnameFrom, DnsRecordType.CNAME, DnsEndpoint.Cloudflare);
+        var host = await DnsResolver.Instance.QueryDns(cnameFrom, DnsRecordType.CNAME);
         if (host == null)
         {
             Console.WriteLine($"No Dns Entry {cnameFrom} -> {cnameTo}");
@@ -223,7 +218,7 @@ public class CertificateStore
     async Task<bool> Resolves(string serverName)
     {
         // this must verify the ip binding...
-        var host = await ClientX.QueryDns(serverName, DnsRecordType.A, DnsEndpoint.Cloudflare);
+        var host = await DnsResolver.Instance.QueryDns(serverName, DnsRecordType.A);
         foreach (var answer in host.Answers)
         {
             foreach(var ipa in SelfIPs)

@@ -30,7 +30,8 @@ public class AsyncSocketReader
 
             if(!this.peek.HasValue)
             {
-                throw new InvalidOperationException("Socket closed");
+                
+                throw new SocketClosedException("Socket closed");
             }
             var peek = this.peek!.Value;
 
