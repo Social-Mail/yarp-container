@@ -5,8 +5,10 @@ using System.Threading;
 
 namespace DotNetReverseProxy.RateLimiter;
 
+using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Net;
 using System.Threading;
 
@@ -17,6 +19,7 @@ public class ConcurrentIPCache
     private readonly Timer _cleanupTimer;
     public readonly int MaxPenalty;
     private int _isCleaningRunning = 0; // Atomic flag
+    private IPAddressRange allowedIPs;
 
     public ConcurrentIPCache() : this(TimeSpan.FromMinutes(5)) { }
 
@@ -27,6 +30,14 @@ public class ConcurrentIPCache
         _cleanupTimer = new Timer(OnTime, null, checkInterval, checkInterval);
         this.MaxPenalty = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out var n) ? n : 60;
 
+        var selfIPs = (System.Environment.GetEnvironmentVariable("SELF_IPs") ?? "0.0.0.0")
+               .Split(",", StringSplitOptions.RemoveEmptyEntries);
+
+
+        var skipIPs = (System.Environment.GetEnvironmentVariable("FORWARD_NO_RATE_LIMIT_IP_ADDRESSES") ?? "")
+            .Split(",", StringSplitOptions.RemoveEmptyEntries);
+
+        this.allowedIPs = new IPAddressRange(skipIPs.Concat(selfIPs));
     }
 
     private void OnTime(object? state)
@@ -72,6 +83,17 @@ public class ConcurrentIPCache
         }
     }
 
+    public bool IsSafe(IPAddress? key)
+    {
+        if (key == null
+            || key.IsLocalOrDocker()
+            || this.allowedIPs.Contains(key))
+        {
+            return true;
+        }
+        return false;
+    }
+
     public bool TryGetValue(IPAddress key, out int value)
     {
         if (_dictionary.TryGetValue(key, out var item))
@@ -91,7 +113,12 @@ public class ConcurrentIPCache
 
     public int GetOrUpdate(IPAddress? key, Func<IPAddress, int> insertFactory, Func<IPAddress, int, int> updateFactory)
     {
-        if (key == null) return 0;
+        if (key == null
+            || key.IsLocalOrDocker()
+            || this.allowedIPs.Contains(key))
+        {
+            return 0;
+        }
 
         long expiry = DateTime.UtcNow.Ticks + _slidingTime.Ticks;
 
@@ -133,7 +160,6 @@ public class ConcurrentIPCache
 
     public void RegisterSuccess(IPAddress? cacheKey)
     {
-        if (cacheKey == null) return;
         GetOrUpdate(cacheKey, (x) => 0, (x, currentErrors) => currentErrors - 1);
     }
 

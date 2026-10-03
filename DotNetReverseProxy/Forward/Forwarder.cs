@@ -137,6 +137,7 @@ public class Forwarder: IMiddleware
         {
             return;
         }
+
         var request = context.Request;
         var response = context.Response;
         var status = response.StatusCode;
