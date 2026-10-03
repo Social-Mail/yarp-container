@@ -303,7 +303,9 @@ public class SmtpServerClient : IDisposable
             logs.Add(">> " + line);
             if (string.IsNullOrEmpty(line))
             {
-                throw new InvalidOperationException($"Socket sent an empty line");
+                this.shouldContinue = false;
+                await this.Destroy();
+                return;
             }
             var tokens = line.Split(' ');
             switch(tokens[0].ToUpper().Trim())

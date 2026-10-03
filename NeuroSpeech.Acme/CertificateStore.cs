@@ -39,7 +39,7 @@ public class CertificateStore
     }
 
 
-    public Task<X509Certificate2> GetAsync(string serverName)
+    public Task<X509Certificate2?> GetAsync(string serverName)
     {
         serverName = serverName.ToLower();
         /// It is important to cache this for 15 minutes
@@ -55,7 +55,7 @@ public class CertificateStore
             }
         })!;
     }
-    internal async Task<X509Certificate2> _GetAsync(string serverName)
+    internal async Task<X509Certificate2?> _GetAsync(string serverName)
     {
         var originalName = serverName;
 
@@ -72,8 +72,9 @@ public class CertificateStore
 
             if (String.IsNullOrWhiteSpace(serverName) || !canIssueCertificate)
             {
-                throw new InvalidOperationException($"{serverName} does not resolve to this server.");
+                // throw new InvalidOperationException($"{serverName} does not resolve to this server.");
                 // send self signed certificate...
+                return null;
             }
 
             var cert = await LoadCached(serverName);
