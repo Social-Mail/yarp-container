@@ -68,8 +68,7 @@ try
         };
 
 
-        var ip = new IPAddress([0, 0, 0, 0]);
-        kestrel.Listen(ip, 443, portOptions =>
+        kestrel.ListenAnyIP(443, portOptions =>
         {
             portOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
 
@@ -78,7 +77,7 @@ try
             portOptions.UseHttps(tls);
         });
 
-        kestrel.Listen(ip, 80, portOptions =>
+        kestrel.ListenAnyIP(80, portOptions =>
         {
             portOptions.Protocols = HttpProtocols.Http1;
         });
