@@ -30,19 +30,21 @@ public class TlsContext
 
     public ConnectionDelegate OnConnection(ConnectionDelegate next)
     {
-        return Task (ConnectionContext cc) => { 
+        return async Task (ConnectionContext cc) => { 
             if(cc.RemoteEndPoint is IPEndPoint ip)
             {
                 if(bannedIPs.IsBanned(ip.Address))
                 {
+                    await Task.Delay(1000);
                     jsonLogger.Log(new {
                         aborted = ip.Address.ToString(),   
                     });
                     cc.Abort();
-                    return next(cc);
+                    await next(cc);
+                    return;
                 }
             }
-            return next(cc);
+            await next(cc);
         };
     }
     public async ValueTask<SslServerAuthenticationOptions> OnHandshake (TlsHandshakeCallbackContext c)
