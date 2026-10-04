@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net;
 using System.Net.Sockets;
 
@@ -12,6 +12,9 @@ public static class IpExtensions
 
         // 1. Instantly clear out localhost / loopback
         if (IPAddress.IsLoopback(ip)) return true;
+
+        if(ip.IsIPv4MappedToIPv6)
+           ip = ip.MapToIPv4();
 
         // 2. Handle IPv4
         if (ip.AddressFamily == AddressFamily.InterNetwork)
