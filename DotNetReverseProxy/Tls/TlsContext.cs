@@ -48,11 +48,6 @@ public class TlsContext
     public async ValueTask<SslServerAuthenticationOptions> OnHandshake (TlsHandshakeCallbackContext c)
     {
         var cert = await store.GetAsync(c.ClientHelloInfo.ServerName);
-        if(cert == null)
-        {
-            c.Connection.Abort();
-            return new SslServerAuthenticationOptions { };
-        }
         var ctx = tlsCache.GetOrCreate(cert.Thumbprint, (ci) =>
         {
 

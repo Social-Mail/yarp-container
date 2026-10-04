@@ -74,7 +74,7 @@ public class CertificateStore
             {
                 // throw new InvalidOperationException($"{serverName} does not resolve to this server.");
                 // send self signed certificate...
-                return null;
+                return await Create24HourCertificate("localhost");
             }
 
             var cert = await LoadCached(serverName);
