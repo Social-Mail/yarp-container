@@ -59,8 +59,9 @@ public class CertificateStore
     {
         var originalName = serverName;
 
-        if (selfSigned)
+        if (selfSigned || IPAddress.TryParse(serverName, out var ip))
         {
+            // disable ip based certificate installation
             return await Create24HourCertificate(serverName);
         }
 
