@@ -58,13 +58,13 @@ public static class SocialMailRateLimiter
 
                     var cacheKey = httpContext.Connection.RemoteIpAddress;
 
-                    var ipCache = httpContext.RequestServices.GetRequiredService<ConcurrentIPCache>();
-                    if (maxPenaltyPerSecond == 0 || cacheKey == null || cacheKey.IsLocalOrDocker() || ipCache.IsSafe(cacheKey))
+                    if (maxPenaltyPerSecond == 0 || cacheKey == null || cacheKey.IsLocalOrDocker())
                     {
                         httpContext.Items.TryAdd("no-rate-limit", "yes");
                         return RateLimitPartition.GetNoLimiter("bypass");
                     }
 
+                    var ipCache = httpContext.RequestServices.GetRequiredService<ConcurrentIPCache>();
                     ipCache.TryGetValue(cacheKey, out var errorCount);
 
                     if (errorCount > maxPenaltyPerSecond)
