@@ -20,7 +20,8 @@ public static class IpExtensions
         if (ip.AddressFamily == AddressFamily.InterNetwork)
         {
             // GetAddressBytes() returns a 4-byte array for IPv4
-            byte[] bytes = ip.GetAddressBytes();
+            Span<byte> bytes = stackalloc byte[4];
+            ip.TryWriteBytes(bytes, out var n);
             byte first = bytes[0];
             byte second = bytes[1];
 
@@ -37,7 +38,9 @@ public static class IpExtensions
         if (ip.AddressFamily == AddressFamily.InterNetworkV6)
         {
             // GetAddressBytes() returns a 16-byte array for IPv6
-            byte[] bytes = ip.GetAddressBytes();
+            Span<byte> bytes = stackalloc byte[16];
+            ip.TryWriteBytes(bytes, out var n);
+            // byte[] bytes = ip.GetAddressBytes();
 
             // Unique Local Addresses (fc00::/7) -> starts with 0xFC or 0xFD
             if ((bytes[0] & 0xFE) == 0xFC) return true;
