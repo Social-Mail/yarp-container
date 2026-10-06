@@ -382,12 +382,17 @@ public class SmtpServerClient : IDisposable
         this.client = client;
         this.stream = client.GetStream();
         this.reader = new AsyncSocketReader(this.stream);
-        if (client.Client.RemoteEndPoint is IPEndPoint ip)
+        if (client.Client.RemoteEndPoint is IPEndPoint ipEP)
         {
-            this.RemoteIPAddress = ip.Address.ToString().Replace("::ffff:", "");
+            var ip = ipEP.Address;
+            if(ip.IsIPv4MappedToIPv6)
+            {
+                ip = ip.MapToIPv4();
+            }
+            this.RemoteIPAddress = ip.ToString();
             try
             {
-                var r = await Dns.GetHostEntryAsync(ip.Address);
+                var r = await Dns.GetHostEntryAsync(ip);
                 if (!string.IsNullOrEmpty(r?.HostName))
                 {
                     this.ReverseDnsName = r.HostName;

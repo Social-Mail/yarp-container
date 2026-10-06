@@ -23,7 +23,8 @@ public class SmtpServer
     {
         try
         {
-            this.server = new TcpListener(System.Net.IPAddress.Any, 25);
+            this.server = new TcpListener(System.Net.IPAddress.IPv6Any, 25);
+            server.Server.DualMode = true;
             this.server.Start();
 
             Task.Run(this.AcceptSocketAsync);
