@@ -194,7 +194,17 @@ public class CertificateInstaller: IMiddleware
         var request = context.Request;
         var response = context.Response;
         var tokens = request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var file = tokens[0];
+
+        // Safety check: ensure there are enough segments to find the token
+        if (tokens == null || tokens.Length < 3)
+        {
+            response.StatusCode = 404;
+            return;
+        }
+
+        // Because we switched to UseWhen, the path is full. 
+        // Format: ["0": .well-known, "1": acme-challenge, "2": your-token]
+        var file = tokens[2]; 
         var challengePath = GetChallengePath(file);
         if (!System.IO.File.Exists(challengePath))
         {
@@ -218,7 +228,11 @@ public static class CertificateInstallerExtensions
 {
     public static IApplicationBuilder UseCertificateInstaller(this IApplicationBuilder app)
     {
-        app.Map("/.well-known/acme-challenge", mapped =>
+        //app.Map("/.well-known/acme-challenge", mapped =>
+        //{
+        //    mapped.UseMiddleware<CertificateInstaller>();
+        //});
+        app.UseWhen(context => context.Request.Path.StartsWithSegments("/.well-known/acme-challenge"), mapped =>
         {
             mapped.UseMiddleware<CertificateInstaller>();
         });
