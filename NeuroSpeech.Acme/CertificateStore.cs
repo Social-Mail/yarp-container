@@ -67,6 +67,13 @@ public class CertificateStore
 
         try {
 
+            // check cached first..
+            var cert = await LoadCached(serverName);
+            if (cert != null)
+            {
+                return cert;
+            }
+
             bool hasWildcardForwrd = this.awsZoneSuffix != null && (await HasDnsForward(serverName));
             
             bool canIssueCertificate = hasWildcardForwrd || await Resolves(serverName);
@@ -77,12 +84,6 @@ public class CertificateStore
                 // send self signed certificate...
                 return await Create24HourCertificate("localhost");
             }
-
-            var cert = await LoadCached(serverName);
-            if (cert != null) {
-                return cert;
-            }
-
 
 
             // install and save...
