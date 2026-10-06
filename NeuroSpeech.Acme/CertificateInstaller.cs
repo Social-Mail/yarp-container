@@ -198,11 +198,17 @@ public class CertificateInstaller: IMiddleware
 
     async Task SendChallenge(HttpContext context)
     {
+        
         var request = context.Request;
         var response = context.Response;
         var tokens = request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var file = tokens[0];
+        var file = tokens[tokens.Length-1];
         var challengePath = GetChallengePath(file);
+        logger.Log(new
+        {
+            file,
+            sending = challengePath,
+        });
         if (!System.IO.File.Exists(challengePath))
         {
             logger.Log(new {
@@ -229,7 +235,12 @@ public static class CertificateInstallerExtensions
 {
     public static IApplicationBuilder UseCertificateInstaller(this IApplicationBuilder app)
     {
-        app.Map("/.well-known/acme-challenge", mapped =>
+        //app.Map("/.well-known/acme-challenge", mapped =>
+        //{
+        //    mapped.UseMiddleware<CertificateInstaller>();
+        //});
+
+        app.UseWhen(context => context.Request.Path.StartsWithSegments("/.well-known/acme-challenge", StringComparison.OrdinalIgnoreCase), mapped =>
         {
             mapped.UseMiddleware<CertificateInstaller>();
         });
