@@ -170,19 +170,20 @@ public class CertificateStore
         var r = host.Answers.Any((a) => a.Data == cnameTo || a.Data == cnameToDot);
         if (!r)
         {
-            //Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new {
-            //    error= "no match",
-            //    result = host,
-            //    from = cnameFrom,
-            //    to = cnameTo
-            //}));
+            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            {
+                error = "no match",
+                result = host,
+                from = cnameFrom,
+                to = cnameTo
+            }));
         }
-        //Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
-        //{
-        //    result = host,
-        //    from = cnameFrom,
-        //    to = cnameTo
-        //}));
+        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+        {
+            result = host,
+            from = cnameFrom,
+            to = cnameTo
+        }));
         return r;
     }
 
