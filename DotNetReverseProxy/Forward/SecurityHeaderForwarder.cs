@@ -19,6 +19,10 @@ public class SecurityHeaderForwarder : HttpTransformer
         var ip = httpContext.Connection.RemoteIpAddress;
         if (ip != null)
         {
+            if(ip.IsIPv4MappedToIPv6)
+            {
+                ip = ip.MapToIPv4();
+            }
             proxyRequest.Headers.TryAddWithoutValidation("x-forwarded-for", ip.ToString());
         }
 
