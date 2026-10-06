@@ -1,3 +1,13 @@
+using Amazon;
+using Amazon.Route53.Model;
+using Amazon.Runtime;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection;
+using NeuroSpeech.Acme;
+using NeuroSpeech.Acme.Models;
 using System;
 using System.IO;
 using System.Linq;
@@ -5,15 +15,6 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.Route53.Model;
-using Amazon.Runtime;
-using NeuroSpeech.Acme;
-using NeuroSpeech.Acme.Models;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace NeuroSpeech.Acme;
 
@@ -240,9 +241,22 @@ public static class CertificateInstallerExtensions
         //    mapped.UseMiddleware<CertificateInstaller>();
         //});
 
-        app.UseWhen(context => context.Request.Path.StartsWithSegments("/.well-known/acme-challenge", StringComparison.OrdinalIgnoreCase), mapped =>
+        //app.UseWhen(context => context.Request.Path.StartsWithSegments("/.well-known/acme-challenge", StringComparison.OrdinalIgnoreCase), mapped =>
+        //{
+        //    mapped.UseMiddleware<CertificateInstaller>();
+        //});
+
+        app.Map("/.well-known/acme-challenge", mapped =>
         {
-            mapped.UseMiddleware<CertificateInstaller>();
+            // Force the isolated branch to look up and register the singleton from the root container
+            var installerInstance = app.ApplicationServices.GetRequiredService<CertificateInstaller>();
+
+            // Run it as a direct terminal delegate to bypass the isolated IMiddlewareFactory lookup entirely
+            mapped.Run(async context =>
+            {
+                // Manually execute the InvokeAsync logic safely
+                await installerInstance.InvokeAsync(context, ctx => Task.CompletedTask);
+            });
         });
         return app;
     }

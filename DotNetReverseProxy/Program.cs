@@ -86,14 +86,14 @@ try
 
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
-    builder.Services.AddSmtpServer();
-    builder.Services.AddSingleton<ISmtpReceiver, ForwardSmtpReceiver>();
     builder.Services.AddSingleton<JsonLogger>();
+    builder.Services.AddSingleton<ISmtpReceiver, ForwardSmtpReceiver>();
     builder.Services.AddSingleton<CertificateStore>();
     builder.Services.AddSingleton<TlsContext>();
     builder.Services.AddSingleton<CertificateInstaller>();
     builder.Services.AddSingleton<ReverseHostFinder>();
     builder.Services.AddSingleton<SmtpHostFinder>();
+    builder.Services.AddSmtpServer();
     builder.Services.AddResponseCompression((options) =>
     {
         options.EnableForHttps = true;
