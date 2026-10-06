@@ -1,13 +1,3 @@
-using Amazon;
-using Amazon.Route53.Model;
-using Amazon.Runtime;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
-using Microsoft.Extensions.Caching.Memory;
-using Microsoft.Extensions.DependencyInjection;
-using NeuroSpeech.Acme;
-using NeuroSpeech.Acme.Models;
 using System;
 using System.IO;
 using System.Linq;
@@ -15,6 +5,15 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon;
+using Amazon.Route53.Model;
+using Amazon.Runtime;
+using NeuroSpeech.Acme;
+using NeuroSpeech.Acme.Models;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace NeuroSpeech.Acme;
 
@@ -95,16 +94,9 @@ public class CertificateInstaller: IMiddleware
                     foreach(var c in a.Challenges)
                     {
                         var f = GetChallengePath(c.Token);
-                        logger.Log(new {
-                            saved = f,
-                        });
                         await System.IO.File.WriteAllTextAsync(f, c.KeyAuthorization);
                         d.Add(async () =>
                         {
-                            logger.Log(new
-                            {
-                                deleted = f,
-                            });
                             System.IO.File.Delete(f);
                         });
                     }
@@ -199,23 +191,13 @@ public class CertificateInstaller: IMiddleware
 
     async Task SendChallenge(HttpContext context)
     {
-        
         var request = context.Request;
         var response = context.Response;
         var tokens = request.Path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries);
-        var file = tokens[tokens.Length-1];
+        var file = tokens[0];
         var challengePath = GetChallengePath(file);
-        logger.Log(new
-        {
-            file,
-            sending = challengePath,
-        });
         if (!System.IO.File.Exists(challengePath))
         {
-            logger.Log(new {
-                file,
-                notFound = challengePath
-            });
             response.StatusCode = 404;
             return;
         }
@@ -236,27 +218,9 @@ public static class CertificateInstallerExtensions
 {
     public static IApplicationBuilder UseCertificateInstaller(this IApplicationBuilder app)
     {
-        //app.Map("/.well-known/acme-challenge", mapped =>
-        //{
-        //    mapped.UseMiddleware<CertificateInstaller>();
-        //});
-
-        //app.UseWhen(context => context.Request.Path.StartsWithSegments("/.well-known/acme-challenge", StringComparison.OrdinalIgnoreCase), mapped =>
-        //{
-        //    mapped.UseMiddleware<CertificateInstaller>();
-        //});
-
         app.Map("/.well-known/acme-challenge", mapped =>
         {
-            // Force the isolated branch to look up and register the singleton from the root container
-            var installerInstance = app.ApplicationServices.GetRequiredService<CertificateInstaller>();
-
-            // Run it as a direct terminal delegate to bypass the isolated IMiddlewareFactory lookup entirely
-            mapped.Run(async context =>
-            {
-                // Manually execute the InvokeAsync logic safely
-                await installerInstance.InvokeAsync(context, ctx => Task.CompletedTask);
-            });
+            mapped.UseMiddleware<CertificateInstaller>();
         });
         return app;
     }
