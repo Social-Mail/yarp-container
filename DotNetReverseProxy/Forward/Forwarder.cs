@@ -160,7 +160,7 @@ public class Forwarder: IMiddleware
             }
         }
 
-        using RateLimitLease lease = await Limiter.AcquireAsync(httpContext, permitCount: 1, httpContext.RequestAborted);
+        using RateLimitLease lease = await Limiter.AcquireAsync(httpContext, permitCount: 0, httpContext.RequestAborted);
 
         if (!lease.IsAcquired)
         {
