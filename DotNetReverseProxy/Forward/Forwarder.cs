@@ -164,6 +164,10 @@ public class Forwarder: IMiddleware
 
         if (!lease.IsAcquired)
         {
+            logger.Log(new {
+                ip = cacheKey?.ToString(),
+                status=429
+            });
             var response = httpContext.Response;
             response.StatusCode = StatusCodes.Status429TooManyRequests;
             await response.WriteAsync("Too many bad requests from your computer, please try after 15 minutes");
