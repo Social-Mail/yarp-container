@@ -87,7 +87,7 @@ try
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
     builder.Services.AddSingleton<JsonLogger>();
-    builder.Services.AddSingleton<ISmtpReceiver, ForwardSmtpReceiver>();
+    builder.Services.AddScoped<ISmtpReceiver, ForwardSmtpReceiver>();
     builder.Services.AddSingleton<CertificateStore>();
     builder.Services.AddSingleton<TlsContext>();
     builder.Services.AddSingleton<CertificateInstaller>();
