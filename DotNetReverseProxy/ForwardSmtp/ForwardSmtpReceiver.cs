@@ -82,6 +82,11 @@ public class ForwardSmtpReceiver : ISmtpReceiver
         var factory = this.hostFinder.GetPort(domain);
         var s = await factory(default);
 
+        if(s == null)
+        {
+            throw new InvalidOperationException($"factory returned null for {domain}");
+        }
+
         var outClient = new SmtpClient();
         await outClient.ConnectAsync(s);
 
