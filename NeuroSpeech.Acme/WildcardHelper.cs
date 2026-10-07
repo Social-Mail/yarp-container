@@ -16,6 +16,16 @@ public class WildcardHelper
         return "*." + hostName.Substring(index + 1);
     }
 
+    public static string? ToDirectory(string hostName)
+    {
+        var index = hostName.IndexOf('.');
+        if (index == -1)
+        {
+            return hostName;
+        }
+        return hostName.Substring(index + 1);
+    }
+
     public static string? ReplaceAsFileName(string hostName)
     {
         var index = hostName.IndexOf('.');

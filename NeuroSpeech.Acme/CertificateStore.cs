@@ -156,9 +156,10 @@ public class CertificateStore
             return false;
         }
 
-        var cnameFrom = $"_acme-challenge." + root;
-        var cnameTo = $"{root}{this.awsZoneSuffix}";
-        var cnameToDot = $"{root}{this.awsZoneSuffix}.";
+        var directory = WildcardHelper.ToDirectory(serverName);
+        var cnameFrom = $"_acme-challenge.{directory}";
+        var cnameTo = $"{directory}{this.awsZoneSuffix}";
+        var cnameToDot = $"{directory}{this.awsZoneSuffix}.";
 
 
         // check CNAME for wildcard...
