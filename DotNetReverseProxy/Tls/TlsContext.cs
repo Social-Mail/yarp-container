@@ -1,4 +1,5 @@
 ﻿using DotNetReverseProxy.Forward;
+using DotNetReverseProxy.HostLookup;
 using DotNetReverseProxy.RateLimiter;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
@@ -18,13 +19,20 @@ public class TlsContext
     private readonly CertificateStore store;
     private readonly BannedIPs bannedIPs;
     private readonly JsonLogger jsonLogger;
+    private readonly ReverseHostFinder hostFinder;
     private readonly MemoryCache tlsCache;
 
-    public TlsContext(CertificateStore store, BannedIPs bannedIPs, JsonLogger jsonLogger)
+    public TlsContext(
+        CertificateStore store,
+        BannedIPs bannedIPs,
+        JsonLogger jsonLogger,
+        ReverseHostFinder hostFinder
+        )
     {
         this.store = store;
         this.bannedIPs = bannedIPs;
         this.jsonLogger = jsonLogger;
+        this.hostFinder = hostFinder;
         tlsCache = new MemoryCache(new MemoryCacheOptions { });
     }
 
@@ -49,7 +57,8 @@ public class TlsContext
     }
     public async ValueTask<SslServerAuthenticationOptions> OnHandshake (TlsHandshakeCallbackContext c)
     {
-        var cert = await store.GetAsync(c.ClientHelloInfo.ServerName);
+        var serverName = c.ClientHelloInfo.ServerName;
+        var cert = await store.GetAsync(serverName, hostFinder.CanServe);
         var ctx = tlsCache.GetOrCreate(cert.Thumbprint, (ci) =>
         {
 

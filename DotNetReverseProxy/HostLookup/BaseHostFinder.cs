@@ -53,6 +53,53 @@ public class BaseHostFinder
         this.logger = logger;
     }
 
+    public async ValueTask<bool> CanServe(string hostName)
+    {
+        var index = hostName.IndexOf(':');
+        if (index != -1)
+        {
+            hostName = hostName.Substring(0, index);
+        }
+
+        // for the case when cluster might support multiple virtual servers
+        // this can query host
+        // we should not cache this as cluster server may have recycled and might need
+        // restart
+
+        hostName = hostName.ToLower();
+        if (this.ports != null)
+        {
+
+            if (this.ports.ContainsKey(hostName))
+            {
+                return true;
+            }
+
+            var wildcard = WildcardHelper.Replace(hostName);
+            if (wildcard != null)
+            {
+                if (this.ports.ContainsKey(wildcard))
+                {
+                    return true;
+                }
+            }
+        }
+
+        // check forward port...
+        if (forwardClient != null)
+        {
+            try
+            {
+                var r = await this.forwardClient!.GetStringAsync($"/{this.protocol}/{hostName}");
+                return !string.IsNullOrWhiteSpace(r);
+            } catch (Exception ex) {
+                logger.LogError(ex);
+            }
+        }
+
+        return this.defaultEndPoint != null;
+    }
+
     public Func<CancellationToken, ValueTask<Stream>>? GetPort(string hostName)
     {
 

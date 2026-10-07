@@ -39,7 +39,7 @@ public class CertificateStore
     }
 
 
-    public Task<X509Certificate2?> GetAsync(string serverName)
+    public Task<X509Certificate2?> GetAsync(string serverName, Func<string, ValueTask<bool>>? canServe = null)
     {
         serverName = serverName.ToLower();
         /// It is important to cache this for 15 minutes
@@ -50,12 +50,12 @@ public class CertificateStore
             lock(this) {
                 return cache.GetOrCreate(key, (c) => {
                     c.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
-                    return _GetAsync(serverName);
+                    return _GetAsync(serverName, canServe);
                 });
             }
         })!;
     }
-    internal async Task<X509Certificate2?> _GetAsync(string serverName)
+    internal async Task<X509Certificate2?> _GetAsync(string serverName, Func<string, ValueTask<bool>>? canServe = null)
     {
         var originalName = serverName;
 
@@ -75,8 +75,13 @@ public class CertificateStore
             }
 
             bool hasWildcardForwrd = this.awsZoneSuffix != null && (await HasDnsForward(serverName));
-            
-            bool canIssueCertificate = hasWildcardForwrd || await Resolves(serverName);
+           
+            bool canIssueCertificate = hasWildcardForwrd
+                || (
+                    canServe == null || await canServe(serverName)
+                    &&
+                    await Resolves(serverName)
+            );
 
             if (String.IsNullOrWhiteSpace(serverName) || !canIssueCertificate)
             {
