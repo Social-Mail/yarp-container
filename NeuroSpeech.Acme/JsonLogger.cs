@@ -5,11 +5,29 @@ using System.Text.Json;
 
 namespace NeuroSpeech;
 
+
+public class DebugLogger
+{
+    private readonly JsonSerializerOptions options;
+
+    public DebugLogger(JsonSerializerOptions options)
+    {
+        this.options = options;
+    }
+
+    public void Log<T>(T item)
+    {
+        Console.WriteLine(JsonSerializer.Serialize(item, options));
+    }
+}
+
 public class JsonLogger {
 
     private JsonSerializerOptions options;
     private TextWriter error;
     private TextWriter console;
+
+    public readonly DebugLogger? DebugLogger;
 
     public JsonLogger()
     {
@@ -23,6 +41,11 @@ public class JsonLogger {
         };
         this.error = Console.Error;
         this.console = Console.Out;
+        if( Environment.GetEnvironmentVariable("LOG_MODE")
+             ?.Equals("debug", StringComparison.OrdinalIgnoreCase) ?? false)
+        {
+            this.DebugLogger = new DebugLogger(options);
+        }
     }
 
     public void Log<T>(T item) {

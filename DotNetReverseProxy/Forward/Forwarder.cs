@@ -172,7 +172,7 @@ public class Forwarder: IMiddleware
                         var connectionLifetime = context.Features.Get<Microsoft.AspNetCore.Connections.Features.IConnectionSocketFeature>();
                         if(connectionLifetime != null)
                         {
-                            logger.Log(new {
+                            logger.DebugLogger?.Log(new {
                                 socket = "closed"
                             });   
                             connectionLifetime.Socket.Close();

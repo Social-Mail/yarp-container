@@ -59,7 +59,7 @@ public class CertificateStore
     {
         var originalName = serverName;
 
-        if (selfSigned || IPAddress.TryParse(serverName, out var ip))
+        if (selfSigned || string.IsNullOrWhiteSpace(serverName) || IPAddress.TryParse(serverName, out var ip))
         {
             // disable ip based certificate installation
             return await Create24HourCertificate(serverName);
@@ -136,23 +136,23 @@ public class CertificateStore
         var root = await ApexDomainChecker.Instance.GetApexDomainAsync(serverName);
         if(root == null)
         {
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            logger.DebugLogger?.Log(new
             {
                 error = "apex not found",
                 serverName
-            }));
+            });
             return false;
         }
 
         // root cert only should be created for direct
         // IP mapping
         if(root == serverName) {
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            logger.DebugLogger?.Log(new
             {
                 error = "serverName is apex",
                 serverName,
                 root
-            }));
+            });
             return false;
         }
 
@@ -171,13 +171,13 @@ public class CertificateStore
         var r = host.Answers.Any((a) => a.Data == cnameTo || a.Data == cnameToDot);
         if (!r)
         {
-            Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+            logger.DebugLogger?.Log(new
             {
                 error = "no match",
                 result = host,
                 from = cnameFrom,
                 to = cnameTo
-            }));
+            });
         }
         Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
         {
