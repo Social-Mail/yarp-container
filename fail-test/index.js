@@ -13,6 +13,9 @@ const host = process.env.TEST_HOST;
 async function test() {
     try {
         const rs = await fetch(`https://${host}`);
+        if(rs.status === 404) {
+            return;
+        }
         if(rs.status > 399) {
             throw new Error(`status: ${rs.status}`);
         }

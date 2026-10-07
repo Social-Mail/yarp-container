@@ -104,8 +104,8 @@ try
             .Concat(["image/svg+xml"]);
     });
 
-    builder.Services.AddSocialMailRateLimiter();
-    builder.Services.AddSingleton<Forwarder>();
+    // builder.Services.AddSocialMailRateLimiter();
+    builder.Services.AddForwarder();
 
     var app = builder.Build();
 
@@ -114,7 +114,7 @@ try
 
     app.UseResponseCompression();
     app.UseRouting();
-    app.UseSocialMailRateLimiter();
+    // app.UseSocialMailRateLimiter();
 
     var rhf = app.Services.GetRequiredService<ReverseHostFinder>();
     await rhf.InitAsync();

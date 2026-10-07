@@ -17,6 +17,8 @@ services:
       - ACME_MODE=self-signed
       - FORWARD_PORT=8001
       - FORWARD_HOST=fail-tester
+      - LOG_MODE=debug
+      - LOCAL_TEST=true
 
   fail-tester:
     image: social-mail-yarp-fail-tester

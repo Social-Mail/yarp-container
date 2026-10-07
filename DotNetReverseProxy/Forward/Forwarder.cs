@@ -1,3 +1,12 @@
+using DotNetReverseProxy.Forward;
+using DotNetReverseProxy.HostLookup;
+using DotNetReverseProxy.RateLimiter;
+using Microsoft.AspNetCore.Connections.Features;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Extensions;
+using Microsoft.Extensions.DependencyInjection;
+using NeuroSpeech;
+using NeuroSpeech.Acme;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,14 +17,8 @@ using System.Net.Http;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.RateLimiting;
 using System.Threading.Tasks;
-using DotNetReverseProxy.Forward;
-using DotNetReverseProxy.HostLookup;
-using DotNetReverseProxy.RateLimiter;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Http.Extensions;
-using NeuroSpeech;
-using NeuroSpeech.Acme;
 using Yarp.ReverseProxy.Forwarder;
 using Yarp.ReverseProxy.Transforms;
 
@@ -29,6 +32,7 @@ public class Forwarder: IMiddleware
     private readonly ForwarderRequestConfig requestOptions;
     private readonly HttpMessageInvoker client;
     private readonly SecurityHeaderForwarder st;
+    private readonly PartitionedRateLimiter<HttpContext> Limiter;
     private readonly ReverseHostFinder hostFinder;
     private readonly JsonLogger logger;
     private readonly ConcurrentIPCache ipCache;
@@ -64,9 +68,73 @@ public class Forwarder: IMiddleware
             ConnectCallback = hostFinder.ConnectAsync
         });
         this.st = new SecurityHeaderForwarder();
+
+        this.Limiter = this.CreateRateLimiter();
     }
 
+    private PartitionedRateLimiter<HttpContext> CreateRateLimiter()
+    {
 
+        var readRequestRegEx = new Regex("^(GET|HEAD|OPTIONS)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+
+        var maxPenaltyPerSecond = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out var n) ? n : 60;
+
+        var noRateLimiterHeader = System.Environment.GetEnvironmentVariable("FORWARD_DISABLE_RATE_LIMITER_HEADER");
+        var noRateLimiterHeaderValue = System.Environment.GetEnvironmentVariable("FORWARD_DISABLE_RATE_LIMITER_HEADER_VALUE");
+
+        return PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        {
+            if (noRateLimiterHeader != null)
+            {
+                if (httpContext.Request.Headers.TryGetValue(noRateLimiterHeader, out var h))
+                {
+                    if (noRateLimiterHeaderValue == h.ToString())
+                    {
+                        httpContext.Items.TryAdd("no-rate-limit", "yes");
+                        return RateLimitPartition.GetNoLimiter("bypass");
+                    }
+                }
+            }
+
+            var cacheKey = httpContext.Connection.RemoteIpAddress;
+
+            if (maxPenaltyPerSecond == 0 || cacheKey == null || cacheKey.IsLocalOrDocker())
+            {
+                httpContext.Items.TryAdd("no-rate-limit", "yes");
+                return RateLimitPartition.GetNoLimiter("bypass");
+            }
+
+            // 2. Read Endpoints Layer (Handles 100s of simultaneous browser requests)
+            if (readRequestRegEx.IsMatch(httpContext.Request.Method))
+            {
+                return RateLimitPartition.GetTokenBucketLimiter(
+                    partitionKey: cacheKey + "_read",
+                    factory: _ => new TokenBucketRateLimiterOptions
+                    {
+                        TokenLimit = 500,                           // Absorbs up to 500 requests instantly at startup
+                        TokensPerPeriod = 50,                       // Refills 50 tokens every second (500 over 10s)
+                        ReplenishmentPeriod = TimeSpan.FromSeconds(1), // Smooth, continuous replenishment
+                        AutoReplenishment = true,
+                        QueueLimit = 100,                           // Safely queue overflow during deep bursts
+                        QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                    });
+            }
+
+            // 3. Write Endpoints Layer
+            return RateLimitPartition.GetTokenBucketLimiter(
+                partitionKey: cacheKey + "_write",
+                factory: _ => new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = 50,                            // Absorbs up to 50 concurrent state-changes
+                    TokensPerPeriod = 5,                        // Refills 5 tokens every second (50 over 10s)
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                    AutoReplenishment = true,
+                    QueueLimit = 20,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst
+                });
+
+        });
+    }
 
     public async Task InvokeAsync(HttpContext httpContext, RequestDelegate next)
     {
@@ -86,10 +154,21 @@ public class Forwarder: IMiddleware
             {
                 var response = httpContext.Response;
                 response.StatusCode = 409;
-                await response.WriteAsync("Too many connections...");
+                await response.WriteAsync("Too many bad requests from your computer, please try after 15 minutes");
                 await response.CompleteAsync();
                 return;
             }
+        }
+
+        using RateLimitLease lease = await Limiter.AcquireAsync(httpContext, permitCount: 1, httpContext.RequestAborted);
+
+        if (!lease.IsAcquired)
+        {
+            var response = httpContext.Response;
+            response.StatusCode = StatusCodes.Status429TooManyRequests;
+            await response.WriteAsync("Too many bad requests from your computer, please try after 15 minutes");
+            await response.CompleteAsync();
+            return;
         }
 
         var start = DateTime.UtcNow;
