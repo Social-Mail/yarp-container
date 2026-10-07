@@ -185,12 +185,15 @@ public class CertificateStore
                 to = cnameTo
             });
         }
-        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(new
+        else
         {
-            result = host,
-            from = cnameFrom,
-            to = cnameTo
-        }));
+            logger.DebugLogger?.Log(new
+            {
+                result = host,
+                from = cnameFrom,
+                to = cnameTo
+            });
+        }
         return r;
     }
 
