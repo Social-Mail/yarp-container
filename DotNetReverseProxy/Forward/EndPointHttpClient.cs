@@ -1,5 +1,6 @@
 ﻿namespace DotNetReverseProxy.Forward;
 
+using System;
 using System.Net;
 using System.Net.Http;
 using System.Net.Sockets;
@@ -19,6 +20,7 @@ public class EndPointHttpClient
                 AllowAutoRedirect = false,
                 AutomaticDecompression = DecompressionMethods.None,
                 UseCookies = false,
+                ConnectTimeout = TimeSpan.FromSeconds(30),
                 ConnectCallback = async (context, cancellationToken) => {
                     var socket = new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified);
                     try

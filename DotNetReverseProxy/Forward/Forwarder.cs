@@ -64,7 +64,7 @@ public class Forwarder: IMiddleware
             AutomaticDecompression = DecompressionMethods.None,
             UseCookies = false,
             ActivityHeadersPropagator = new ReverseProxyPropagator(DistributedContextPropagator.Current),
-            ConnectTimeout = TimeSpan.FromSeconds(15),
+            ConnectTimeout = TimeSpan.FromSeconds(30),
             ConnectCallback = hostFinder.ConnectAsync
         });
         this.st = new SecurityHeaderForwarder();
