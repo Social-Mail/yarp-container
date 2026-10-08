@@ -84,7 +84,13 @@ try
 
             // portOptions.UseHttps(tlsContext.SslAuthenticate, null);
 
-            portOptions.UseHttps();
+            portOptions.UseHttps(
+                new HttpsConnectionAdapterOptions
+                {
+                    // Suppress developer cert lookups by manually specifying protocol versions
+                    SslProtocols = System.Security.Authentication.SslProtocols.Tls12
+                     | System.Security.Authentication.SslProtocols.Tls13
+                });
 
             portOptions.Use((next) => (context) => {
                 context.Features.Set(new TlsConnectionCallbackOptions {
