@@ -75,7 +75,8 @@ try
         {
             portOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
 
-            // portOptions.Use(tlsContext.OnConnection);
+            portOptions.Use(tlsContext.OnConnection);
+            portOptions.UseHttps(tls);
 
             //portOptions.UseHttps(async(streamContext, clientHelloInfo, state, cancellationToken) =>
             //{
@@ -84,25 +85,25 @@ try
 
             // portOptions.UseHttps(tlsContext.SslAuthenticate, null);
 
-            portOptions.UseHttps(
-                new HttpsConnectionAdapterOptions
-                {
-                    // Suppress developer cert lookups by manually specifying protocol versions
-                    SslProtocols = System.Security.Authentication.SslProtocols.Tls12
-                     | System.Security.Authentication.SslProtocols.Tls13
-                });
+            //portOptions.UseHttps(
+            //    new HttpsConnectionAdapterOptions
+            //    {
+            //        // Suppress developer cert lookups by manually specifying protocol versions
+            //        SslProtocols = System.Security.Authentication.SslProtocols.Tls12
+            //         | System.Security.Authentication.SslProtocols.Tls13
+            //    });
 
-            portOptions.Use((next) => (context) => {
-                context.Features.Set(new TlsConnectionCallbackOptions {
-                    ApplicationProtocols = new List<SslApplicationProtocol> {
-                        SslApplicationProtocol.Http11,
-                        SslApplicationProtocol.Http2,
-                        SslApplicationProtocol.Http3
-                    },
-                    OnConnection = tlsContext.OnTlsConnection,
-                });
-                return next(context);
-            });
+            //portOptions.Use((next) => (context) => {
+            //    context.Features.Set(new TlsConnectionCallbackOptions {
+            //        ApplicationProtocols = new List<SslApplicationProtocol> {
+            //            SslApplicationProtocol.Http11,
+            //            SslApplicationProtocol.Http2,
+            //            SslApplicationProtocol.Http3
+            //        },
+            //        OnConnection = tlsContext.OnTlsConnection,
+            //    });
+            //    return next(context);
+            //});
         });
 
         kestrel.ListenAnyIP(80, portOptions =>
