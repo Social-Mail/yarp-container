@@ -59,6 +59,11 @@ public class TlsContext
     {
         var serverName = c.ClientHelloInfo.ServerName;
         var cert = await store.GetAsync(serverName, hostFinder.CanServe);
+        if(cert == null)
+        {
+            c.Connection.Abort();
+            throw new ArgumentException($"Host not found {serverName}");
+        }
         var ctx = tlsCache.GetOrCreate(cert.Thumbprint, (ci) =>
         {
 
@@ -73,13 +78,16 @@ public class TlsContext
                 ServerCertificateContext = certContext,
                 AllowTlsResume = true,
                 ApplicationProtocols = new List<SslApplicationProtocol> {
-                            SslApplicationProtocol.Http11,
-                            SslApplicationProtocol.Http2,
-                            SslApplicationProtocol.Http3 },
-                EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13
+                    SslApplicationProtocol.Http11,
+                    SslApplicationProtocol.Http2,
+                    SslApplicationProtocol.Http3
+                },
+                EnabledSslProtocols =
+                    System.Security.Authentication.SslProtocols.Tls12
+                    | System.Security.Authentication.SslProtocols.Tls13
             };
         });
-        return ctx;
+        return ctx!;
 
     }
 

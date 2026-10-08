@@ -87,7 +87,8 @@ public class CertificateStore
             {
                 // throw new InvalidOperationException($"{serverName} does not resolve to this server.");
                 // send self signed certificate...
-                return await Create24HourCertificate("localhost");
+                // return await Create24HourCertificate("localhost");
+                return null;
             }
 
 
