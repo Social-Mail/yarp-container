@@ -84,6 +84,8 @@ try
 
             // portOptions.UseHttps(tlsContext.SslAuthenticate, null);
 
+            portOptions.UseHttps();
+
             portOptions.Use((next) => (context) => {
                 context.Features.Set(new TlsConnectionCallbackOptions {
                     ApplicationProtocols = new List<SslApplicationProtocol> {
