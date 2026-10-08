@@ -27,8 +27,8 @@ internal class DnsResolver
 
     }
 
-    internal Task<DnsResponse> QueryDns(string question, DnsRecordType type)
+    internal Task<DnsResponse> QueryDns(string question, DnsRecordType type, CancellationToken token = default)
     {
-        return this.resolver.QueryAsync(question, type);
+        return this.resolver.QueryAsync(question, type, token);
     }
 }

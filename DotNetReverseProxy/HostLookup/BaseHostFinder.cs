@@ -53,7 +53,7 @@ public class BaseHostFinder
         this.logger = logger;
     }
 
-    public async ValueTask<bool> CanServe(string hostName)
+    public async ValueTask<bool> CanServe(string hostName, CancellationToken token = default)
     {
         var index = hostName.IndexOf(':');
         if (index != -1)
@@ -90,7 +90,7 @@ public class BaseHostFinder
         {
             try
             {
-                var r = await this.forwardClient!.GetStringAsync($"/{this.protocol}/{hostName}");
+                var r = await this.forwardClient!.GetStringAsync($"/{this.protocol}/{hostName}", token);
                 return !string.IsNullOrWhiteSpace(r);
             } catch (Exception ex) {
                 logger.LogError(ex);

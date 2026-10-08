@@ -5,6 +5,7 @@ using DotNetReverseProxy.ForwardSmtp;
 using DotNetReverseProxy.HostLookup;
 using DotNetReverseProxy.Tls;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
@@ -19,10 +20,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Net.Quic;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 try
@@ -72,9 +75,26 @@ try
         {
             portOptions.Protocols = HttpProtocols.Http1AndHttp2AndHttp3;
 
-            portOptions.Use(tlsContext.OnConnection);
+            // portOptions.Use(tlsContext.OnConnection);
 
-            portOptions.UseHttps(tls);
+            //portOptions.UseHttps(async(streamContext, clientHelloInfo, state, cancellationToken) =>
+            //{
+            //    return null;
+            //}, null);
+
+            // portOptions.UseHttps(tlsContext.SslAuthenticate, null);
+
+            portOptions.Use((next) => (context) => {
+                context.Features.Set(new TlsConnectionCallbackOptions {
+                    ApplicationProtocols = new List<SslApplicationProtocol> {
+                        SslApplicationProtocol.Http11,
+                        SslApplicationProtocol.Http2,
+                        SslApplicationProtocol.Http3
+                    },
+                    OnConnection = tlsContext.OnTlsConnection,
+                });
+                return next(context);
+            });
         });
 
         kestrel.ListenAnyIP(80, portOptions =>

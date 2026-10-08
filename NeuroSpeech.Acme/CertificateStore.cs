@@ -39,7 +39,7 @@ public class CertificateStore
     }
 
 
-    public Task<X509Certificate2?> GetAsync(string serverName, Func<string, ValueTask<bool>>? canServe = null)
+    public Task<X509Certificate2?> GetAsync(string serverName, Func<string, CancellationToken, ValueTask<bool>>? canServe = null, CancellationToken token = default)
     {
         serverName = serverName.ToLower();
         /// It is important to cache this for 15 minutes
@@ -50,12 +50,12 @@ public class CertificateStore
             lock(this) {
                 return cache.GetOrCreate(key, (c) => {
                     c.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(15);
-                    return _GetAsync(serverName, canServe);
+                    return _GetAsync(serverName, canServe, token);
                 });
             }
         })!;
     }
-    internal async Task<X509Certificate2?> _GetAsync(string serverName, Func<string, ValueTask<bool>>? canServe = null)
+    internal async Task<X509Certificate2?> _GetAsync(string serverName, Func<string, CancellationToken, ValueTask<bool>>? canServe = null, CancellationToken token = default)
     {
         var originalName = serverName;
 
@@ -78,9 +78,9 @@ public class CertificateStore
            
             bool canIssueCertificate = hasWildcardForwrd
                 || (
-                    canServe == null || await canServe(serverName)
+                    canServe == null || await canServe(serverName, token)
                     &&
-                    await Resolves(serverName)
+                    await Resolves(serverName, token)
             );
 
             if (String.IsNullOrWhiteSpace(serverName) || !canIssueCertificate)
@@ -135,7 +135,7 @@ public class CertificateStore
         return null;
     }
 
-    private async Task<bool> HasDnsForward(string serverName)
+    private async Task<bool> HasDnsForward(string serverName, CancellationToken token = default)
     {
 
         // we need to go up...
@@ -169,7 +169,7 @@ public class CertificateStore
 
 
         // check CNAME for wildcard...
-        var host = await DnsResolver.Instance.QueryDns(cnameFrom, DnsRecordType.CNAME);
+        var host = await DnsResolver.Instance.QueryDns(cnameFrom, DnsRecordType.CNAME, token);
         if (host == null)
         {
             Console.WriteLine($"No Dns Entry {cnameFrom} -> {cnameTo}");
@@ -229,10 +229,10 @@ public class CertificateStore
         await File.WriteAllTextAsync(keyPath, cert.Key, System.Text.Encoding.UTF8);
     }
 
-    async Task<bool> Resolves(string serverName)
+    async Task<bool> Resolves(string serverName, CancellationToken token = default)
     {
         // this must verify the ip binding...
-        var host = await DnsResolver.Instance.QueryDns(serverName, DnsRecordType.A);
+        var host = await DnsResolver.Instance.QueryDns(serverName, DnsRecordType.A, token);
         foreach (var answer in host.Answers)
         {
             foreach(var ipa in SelfIPs)
@@ -242,7 +242,7 @@ public class CertificateStore
                 }
             }
         }
-        var ip = await Dns.GetHostEntryAsync(serverName);
+        var ip = await Dns.GetHostEntryAsync(serverName, token);
         foreach (var selfIp in SelfIPs)
         {
             foreach (var ipa in ip.AddressList)

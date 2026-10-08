@@ -9,7 +9,9 @@ using NeuroSpeech.Acme;
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Net.Security;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace DotNetReverseProxy.Tls;
@@ -58,11 +60,73 @@ public class TlsContext
             await next(cc);
         };
     }
+
     public async ValueTask<SslServerAuthenticationOptions> OnHandshake (TlsHandshakeCallbackContext c)
     {
         var serverName = c.ClientHelloInfo.ServerName;
         var cert = await store.GetAsync(serverName, hostFinder.CanServe);
         if(cert == null)
+        {
+
+            // we need to add this to rate limiter
+            if (c.Connection.RemoteEndPoint is IPEndPoint ipEndPoint)
+            {
+                ipCache.RegisterPenalty(ipEndPoint.Address, 5);
+            }
+
+            c.Connection.Abort();
+            throw new ArgumentException($"Host not found {serverName}");
+
+        }
+        var ctx = tlsCache.GetOrCreate(cert.Thumbprint, (ci) =>
+        {
+
+            ci.SlidingExpiration = TimeSpan.FromMinutes(15);
+            ci.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(60);
+
+            var certContext = SslStreamCertificateContext.Create(cert, additionalCertificates: null);
+
+
+            return new SslServerAuthenticationOptions
+            {
+                ServerCertificateContext = certContext,
+                AllowTlsResume = true,
+                ApplicationProtocols = new List<SslApplicationProtocol> {
+                    SslApplicationProtocol.Http11,
+                    SslApplicationProtocol.Http2,
+                    SslApplicationProtocol.Http3
+                },
+                EnabledSslProtocols =
+                    System.Security.Authentication.SslProtocols.Tls12
+                    | System.Security.Authentication.SslProtocols.Tls13
+            };
+        });
+        return ctx!;
+
+    }
+
+    internal async ValueTask<SslServerAuthenticationOptions> OnTlsConnection(
+        TlsConnectionCallbackContext c,
+        CancellationToken token)
+    {
+        var cc = c.Connection;
+        if (cc.RemoteEndPoint is IPEndPoint ip)
+        {
+            if (bannedIPs.IsBanned(ip.Address))
+            {
+                await Task.Delay(1000);
+                jsonLogger.Log(new
+                {
+                    aborted = ip.Address.ToString(),
+                });
+                cc.Abort();
+                // we don't want exception to throw up so we will continue..
+            }
+        }
+
+        var serverName = c.ClientHelloInfo.ServerName;
+        var cert = await store.GetAsync(serverName, hostFinder.CanServe, token);
+        if (cert == null)
         {
 
             // we need to add this to rate limiter
@@ -98,7 +162,5 @@ public class TlsContext
             };
         });
         return ctx!;
-
     }
-
 }
