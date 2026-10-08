@@ -244,23 +244,23 @@ public class Forwarder: IMiddleware
                 if (penalty == 1 && status == 404)
                 {
                     penalty = 2;
-
                 }
-                var n = ipCache.GetOrUpdate(cacheKey, (x) => penalty, (x, p) => p + penalty);
-                if(n >= ipCache.MaxPenalty)
+
+                if(ipCache.RegisterPenalty(cacheKey, penalty))
                 {
-                    bannedIPs.Add(cacheKey);
                     try
                     {
                         var connectionLifetime = context.Features.Get<Microsoft.AspNetCore.Connections.Features.IConnectionSocketFeature>();
-                        if(connectionLifetime != null)
+                        if (connectionLifetime != null)
                         {
-                            logger.DebugLogger?.Log(new {
+                            logger.DebugLogger?.Log(new
+                            {
                                 socket = "closed"
-                            });   
+                            });
                             connectionLifetime.Socket.Close();
                         }
-                    } catch { }
+                    }
+                    catch { }
                 }
             }
 

@@ -18,10 +18,14 @@ public class ConcurrentIPCache
     private readonly ConcurrentDictionary<IPAddress, CacheItem> _dictionary = new();
     private readonly Timer _cleanupTimer;
     public readonly int MaxPenalty;
+    private readonly BannedIPs? bannedIPs;
     private int _isCleaningRunning = 0; // Atomic flag
     private IPAddressRange allowedIPs;
 
-    public ConcurrentIPCache() : this(TimeSpan.FromMinutes(5)) { }
+    public ConcurrentIPCache(BannedIPs bannedIPs) : this(TimeSpan.FromMinutes(5))
+    {
+        this.bannedIPs = bannedIPs;
+    }
 
     public ConcurrentIPCache(TimeSpan slidingTimer)
     {
@@ -164,5 +168,16 @@ public class ConcurrentIPCache
     }
 
     public bool ContainsKey(IPAddress a) => _dictionary.ContainsKey(a);
+
+    internal bool RegisterPenalty(IPAddress cacheKey, int penalty)
+    {
+        var n = GetOrUpdate(cacheKey, (x) => penalty, (x, p) => p + penalty);
+        if(n > MaxPenalty)
+        {
+            bannedIPs?.Add(cacheKey);
+            return true;
+        }
+        return false;
+    }
 }
 

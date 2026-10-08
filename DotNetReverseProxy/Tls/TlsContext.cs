@@ -20,19 +20,22 @@ public class TlsContext
     private readonly BannedIPs bannedIPs;
     private readonly JsonLogger jsonLogger;
     private readonly ReverseHostFinder hostFinder;
+    private readonly ConcurrentIPCache ipCache;
     private readonly MemoryCache tlsCache;
 
     public TlsContext(
         CertificateStore store,
         BannedIPs bannedIPs,
         JsonLogger jsonLogger,
-        ReverseHostFinder hostFinder
+        ReverseHostFinder hostFinder,
+        ConcurrentIPCache ipCache
         )
     {
         this.store = store;
         this.bannedIPs = bannedIPs;
         this.jsonLogger = jsonLogger;
         this.hostFinder = hostFinder;
+        this.ipCache = ipCache;
         tlsCache = new MemoryCache(new MemoryCacheOptions { });
     }
 
@@ -61,6 +64,13 @@ public class TlsContext
         var cert = await store.GetAsync(serverName, hostFinder.CanServe);
         if(cert == null)
         {
+
+            // we need to add this to rate limiter
+            if (c.Connection.RemoteEndPoint is IPEndPoint ipEndPoint)
+            {
+                ipCache.RegisterPenalty(ipEndPoint.Address, 5);
+            }
+
             c.Connection.Abort();
             throw new ArgumentException($"Host not found {serverName}");
         }
