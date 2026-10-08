@@ -9,6 +9,10 @@ public static class DnsResolver
 {
     public static async IAsyncEnumerable<string> ResolveAsync(string domain, DnsRecordType type)
     {
+        if(string.IsNullOrWhiteSpace(domain))
+        {
+            yield break;
+        }
         var r = await ClientX.QueryDns(domain, type, DnsEndpoint.Cloudflare, typedRecords: true);
         foreach (var answer in r.TypedAnswers!)
         {
