@@ -4,7 +4,7 @@ namespace NeuroSpeech.Smtp.Spf;
 
 public class SpfParser
 {
-    public static SpfMechanism[]? Parse(string input)
+    public static SpfMechanism[]? Parse(string input, string domain)
     {
         input = input.Trim();
         if (!input.StartsWith("v=spf1"))
@@ -21,7 +21,7 @@ public class SpfParser
 
         foreach (var token in tokens)
         {
-            list.Add(SpfMechanism.Parse(token));
+            list.Add(SpfMechanism.Parse(token, domain));
         }
         return list.ToArray();
     }

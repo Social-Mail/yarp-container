@@ -52,7 +52,7 @@ public class SpfValidator
     {
         await foreach (var a in DnsResolver.ResolveAsync(domain, DnsRecordType.TXT))
         {
-            var parsed = SpfParser.Parse(a);
+            var parsed = SpfParser.Parse(a, domain);
             if (parsed != null)
             {
                 var tasks = new List<Task>();

@@ -5,7 +5,7 @@ namespace NeuroSpeech.Smtp.Spf;
 public readonly struct SpfMechanism
 {
 
-    public static SpfMechanism Parse(string input)
+    public static SpfMechanism Parse(string input, string domain)
     {
         input = input.Trim();
 
@@ -15,7 +15,7 @@ public readonly struct SpfMechanism
 
         char mask = '+';
         string type = "";
-        string value = "";
+        string value = domain;
         string? prefix = null;
         if(match.Groups.TryGetValue("mask", out var maskGroup) && maskGroup.Success)
         {
@@ -32,6 +32,11 @@ public readonly struct SpfMechanism
         if(match.Groups.TryGetValue("prefix", out var prefixGroup) && prefixGroup.Success)
         {
             prefix = prefixGroup.Value;
+        }
+
+        if(string.IsNullOrWhiteSpace(value))
+        {
+            value = domain;
         }
 
         return new SpfMechanism(mask, type, value, prefix);

@@ -15,17 +15,17 @@ public class SpfUnitTests
     [Fact]
     public void ParseMechanisms()
     {
-        var mx = SpfMechanism.Parse("mx");
+        var mx = SpfMechanism.Parse("mx", "a.com");
         Assert.Equal("mx", mx.Type);
 
-        mx = SpfMechanism.Parse("mx/24");
+        mx = SpfMechanism.Parse("mx/24", "a.com");
         Assert.Equal("mx", mx.Type);
 
         Assert.Equal("24", mx.Suffix);
 
 
 
-        mx = SpfMechanism.Parse("mx:a.com/24");
+        mx = SpfMechanism.Parse("mx:a.com/24", "a.com");
         Assert.Equal("mx", mx.Type);
         Assert.Equal("a.com", mx.Value);
         Assert.Equal("24", mx.Suffix);
