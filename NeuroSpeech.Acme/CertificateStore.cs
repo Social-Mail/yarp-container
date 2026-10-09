@@ -66,10 +66,22 @@ public class CertificateStore
         }
 
         try {
-            bool shouldServe = canServe != null && await canServe(serverName, token);
-            if (!shouldServe)
+            try
             {
-                return null;
+                bool shouldServe = canServe != null && await canServe(serverName, token);
+                if (!shouldServe)
+                {
+                    return null;
+                }
+            } catch (Exception ex)
+            {
+                logger.Log(new
+                {
+                    failed= "shouldServe",
+                    host = serverName,
+                    error = ex.ToString()
+                });
+                // we will ignore this in case of startup time issue...
             }
 
             // check cached first..
