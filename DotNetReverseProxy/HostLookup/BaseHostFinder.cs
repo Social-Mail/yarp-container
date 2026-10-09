@@ -91,13 +91,8 @@ public class BaseHostFinder
         // check forward port...
         if (forwardClient != null)
         {
-            try
-            {
-                var r = await this.forwardClient!.GetStringAsync($"/{this.protocol}/{hostName}", token);
-                return !string.IsNullOrWhiteSpace(r);
-            } catch (Exception ex) {
-                logger.LogError(ex);
-            }
+            var r = await this.forwardClient!.GetStringAsync($"/{this.protocol}/{hostName}", token);
+            return !string.IsNullOrWhiteSpace(r);
         }
 
         return this.defaultEndPoint != null;
