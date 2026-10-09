@@ -52,9 +52,8 @@ public class SpfUnitTests
     [Fact]
     public async Task Resolve2()
     {
-        var spf = await SpfValidator.Fetch("gmail.com");
-
-        Assert.True(spf.IPRanges.Any());
+        var spf = await SpfValidator.Fetch("bounce.em.gettyimages.com");
+        Assert.True(spf.Networks.Any());
     }
 
 }

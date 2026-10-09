@@ -13,6 +13,18 @@ public static class DnsResolver
         {
             yield break;
         }
+
+        if(type == DnsRecordType.TXT)
+        {
+
+            var r1 = await ClientX.QueryDns(domain, DnsRecordType.TXT, DnsEndpoint.Cloudflare, typedRecords: true);
+            foreach (var answer in r1.Answers)
+            {
+                yield return answer.TxtConcatenatedData;
+            }
+            yield break;
+        }
+
         var r = await ClientX.QueryDns(domain, type, DnsEndpoint.Cloudflare, typedRecords: true);
         foreach (var answer in r.TypedAnswers!)
         {
@@ -25,7 +37,6 @@ public static class DnsResolver
                     yield return a.Address.ToString();
                     break;
                 case TxtRecord txt:
-                    
                     yield return UnescapeTxtRecord(txt.Text);
                     break;
                 case MxRecord mx:
@@ -54,9 +65,11 @@ public static class DnsResolver
             return rawRecord;
 
         // 1. Remove leading and trailing double quotes if they wrap the record
-        if (rawRecord.StartsWith("\"") && rawRecord.EndsWith("\"") && rawRecord.Length >= 2)
+        if (rawRecord.StartsWith('\"') && rawRecord.EndsWith('\"') && rawRecord.Length >= 2)
         {
             rawRecord = rawRecord.Substring(1, rawRecord.Length - 2);
+            // these are sequences of split records
+            rawRecord = rawRecord.Replace("\"\"", "");
         }
 
         // 2. Replace escaped internal quotes (\" -> ")

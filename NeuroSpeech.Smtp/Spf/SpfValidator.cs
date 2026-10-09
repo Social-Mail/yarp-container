@@ -18,22 +18,13 @@ public class SpfValidator
         
     }
 
-    private List<IPNetwork> networks;
+    private List<IPNetwork>? networks;
+    public List<IPNetwork> Networks => networks ?? IPRanges.Select((x) => x.ToNetwork()).ToList();
 
     public bool Contains(string ipAddress)
     {
         IPAddress ip = IPAddress.Parse(ipAddress);
-        if(networks == null)
-        {
-            lock(this)
-            {
-                if(networks == null)
-                {
-                    networks = IPRanges.Select((x) => x.ToNetwork()).ToList();
-                }
-            }
-        }
-        return networks.Any((x) => x.Contains(ip));
+        return Networks.Any((x) => x.Contains(ip));
     }
 
     public SpfValidator(string domain)
