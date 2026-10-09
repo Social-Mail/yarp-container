@@ -252,6 +252,10 @@ public class BaseHostFinder
         //    hostName,
         //    socket = r
         //});
+        if(string.IsNullOrWhiteSpace(r)) {
+            // return empty stream...
+            return Stream.Null;
+        }
         var endPoint = ParseEndPoint(r);
         var factory = Factory(endPoint);
         return await factory(ct);
