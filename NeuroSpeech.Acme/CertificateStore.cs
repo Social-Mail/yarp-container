@@ -66,6 +66,11 @@ public class CertificateStore
         }
 
         try {
+            bool shouldServe = canServe != null && await canServe(serverName, token);
+            if (!shouldServe)
+            {
+                return null;
+            }
 
             // check cached first..
             var cert = await LoadCached(serverName);
@@ -75,12 +80,6 @@ public class CertificateStore
             }
 
             if(string.IsNullOrWhiteSpace(serverName))
-            {
-                return null;
-            }
-
-            bool shouldServe = canServe != null && await canServe(serverName, token);
-            if(!shouldServe)
             {
                 return null;
             }
