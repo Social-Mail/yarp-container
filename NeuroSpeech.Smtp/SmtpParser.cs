@@ -26,7 +26,9 @@ public class SmtpParser
         }
         var smtpUTF8 = true;
 
-        return (MimeKit.MailboxAddress.Parse(address), options);
+        var m = MimeKit.MailboxAddress.Parse(address);
+        m.Address = m.Address.Trim().ToLower();
+        return (m, options);
     }
 }
 
