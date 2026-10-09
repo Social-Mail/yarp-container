@@ -74,6 +74,17 @@ public class CertificateStore
                 return cert;
             }
 
+            if(string.IsNullOrWhiteSpace(serverName))
+            {
+                return null;
+            }
+
+            bool shouldServe = canServe != null && await canServe(serverName, token);
+            if(!shouldServe)
+            {
+                return null;
+            }
+
             bool hasWildcardForwrd = this.awsZoneSuffix != null && (await HasDnsForward(serverName));
            
             bool canIssueCertificate = hasWildcardForwrd
