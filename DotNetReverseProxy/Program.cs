@@ -1,46 +1,30 @@
-﻿using Amazon.Runtime.Internal.Util;
-using DotNetReverseProxy;
-using DotNetReverseProxy.Forward;
+﻿using DotNetReverseProxy;
 using DotNetReverseProxy.ForwardSmtp;
 using DotNetReverseProxy.HostLookup;
 using DotNetReverseProxy.Tls;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using NeuroSpeech;
 using NeuroSpeech.Acme;
 using NeuroSpeech.Smtp;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Net.Quic;
-using System.Net.Security;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
-using System.Threading;
 using System.Threading.Tasks;
 
 try
 {
 
-#pragma warning disable CA2252 // This API requires opting into preview features
-    if (QuicListener.IsSupported)
-    {
-        Console.Out.WriteLine("Quic is available");
-    }
-    else
-    {
+    if (!QuicListener.IsSupported) {
         Console.Out.WriteLine("Quic is not available");
     }
-#pragma warning restore CA2252 // This API requires opting into preview features
 
     var weakTable = new ConditionalWeakTable<object, UnixDomainSocketEndPoint>();
 
@@ -77,33 +61,6 @@ try
 
             portOptions.Use(tlsContext.OnConnection);
             portOptions.UseHttps(tls);
-
-            //portOptions.UseHttps(async(streamContext, clientHelloInfo, state, cancellationToken) =>
-            //{
-            //    return null;
-            //}, null);
-
-            // portOptions.UseHttps(tlsContext.SslAuthenticate, null);
-
-            //portOptions.UseHttps(
-            //    new HttpsConnectionAdapterOptions
-            //    {
-            //        // Suppress developer cert lookups by manually specifying protocol versions
-            //        SslProtocols = System.Security.Authentication.SslProtocols.Tls12
-            //         | System.Security.Authentication.SslProtocols.Tls13
-            //    });
-
-            //portOptions.Use((next) => (context) => {
-            //    context.Features.Set(new TlsConnectionCallbackOptions {
-            //        ApplicationProtocols = new List<SslApplicationProtocol> {
-            //            SslApplicationProtocol.Http11,
-            //            SslApplicationProtocol.Http2,
-            //            SslApplicationProtocol.Http3
-            //        },
-            //        OnConnection = tlsContext.OnTlsConnection,
-            //    });
-            //    return next(context);
-            //});
         });
 
         kestrel.ListenAnyIP(80, portOptions =>

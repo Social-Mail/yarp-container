@@ -33,6 +33,9 @@ public class Forwarder: IMiddleware
     private readonly HttpMessageInvoker client;
     private readonly SecurityHeaderForwarder st;
     private readonly PartitionedRateLimiter<HttpContext> Limiter;
+    private readonly string? noRateLimiterHeader;
+    private readonly string? noRateLimiterHeaderValue;
+    private readonly int maxPenaltyPerSecond;
     private readonly ReverseHostFinder hostFinder;
     private readonly JsonLogger logger;
     private readonly ConcurrentIPCache ipCache;
@@ -70,6 +73,32 @@ public class Forwarder: IMiddleware
         this.st = new SecurityHeaderForwarder();
 
         this.Limiter = this.CreateRateLimiter();
+        this.noRateLimiterHeader = System.Environment.GetEnvironmentVariable("FORWARD_DISABLE_RATE_LIMITER_HEADER");
+        this.noRateLimiterHeaderValue = System.Environment.GetEnvironmentVariable("FORWARD_DISABLE_RATE_LIMITER_HEADER_VALUE");
+        this.maxPenaltyPerSecond = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out n) ? n : 60;
+
+    }
+
+    private bool DisableRateLimit(HttpContext context)
+    {
+        if(context.Items.ContainsKey("no-rate-limit")) {
+            return true;
+        }
+        var cacheKey = context.Connection.RemoteIpAddress;
+        if (maxPenaltyPerSecond == 0 || cacheKey == null || cacheKey.IsLocalOrDocker())
+        {
+            context.Items.TryAdd("no-rate-limit", "yes");
+            return true;
+        }
+        if (noRateLimiterHeader != null && context.Request.Headers.TryGetValue(noRateLimiterHeader, out var h))
+        {
+            if(noRateLimiterHeaderValue == h.ToString())
+            {
+                context.Items.TryAdd("no-rate-limit", "yes");
+                return true;
+            }
+        }
+        return false;
     }
 
     private PartitionedRateLimiter<HttpContext> CreateRateLimiter()
@@ -77,32 +106,14 @@ public class Forwarder: IMiddleware
 
         var readRequestRegEx = new Regex("^(GET|HEAD|OPTIONS)$", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        var maxPenaltyPerSecond = int.TryParse(System.Environment.GetEnvironmentVariable("FORWARD_MAX_ERROR_PENALTY") ?? "60", out var n) ? n : 60;
-
-        var noRateLimiterHeader = System.Environment.GetEnvironmentVariable("FORWARD_DISABLE_RATE_LIMITER_HEADER");
-        var noRateLimiterHeaderValue = System.Environment.GetEnvironmentVariable("FORWARD_DISABLE_RATE_LIMITER_HEADER_VALUE");
-
         return PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
         {
-            if (noRateLimiterHeader != null)
+            if (this.DisableRateLimit(httpContext))
             {
-                if (httpContext.Request.Headers.TryGetValue(noRateLimiterHeader, out var h))
-                {
-                    if (noRateLimiterHeaderValue == h.ToString())
-                    {
-                        httpContext.Items.TryAdd("no-rate-limit", "yes");
-                        return RateLimitPartition.GetNoLimiter("bypass");
-                    }
-                }
+                return RateLimitPartition.GetNoLimiter("bypass");
             }
 
             var cacheKey = httpContext.Connection.RemoteIpAddress;
-
-            if (maxPenaltyPerSecond == 0 || cacheKey == null || cacheKey.IsLocalOrDocker())
-            {
-                httpContext.Items.TryAdd("no-rate-limit", "yes");
-                return RateLimitPartition.GetNoLimiter("bypass");
-            }
 
             // 2. Read Endpoints Layer (Handles 100s of simultaneous browser requests)
             if (readRequestRegEx.IsMatch(httpContext.Request.Method))
@@ -228,7 +239,7 @@ public class Forwarder: IMiddleware
         var time = DateTime.UtcNow;
         var error = ex?.ToString();
 
-        if (status >= 400 && !context.Items.ContainsKey("no-rate-limit"))
+        if (status >= 400 && !this.DisableRateLimit(context))
         {
             var penalty = this.defaultPenalty;
             if(response.Headers.TryGetValue("x-error-penalty", out var p))
@@ -293,7 +304,6 @@ public class Forwarder: IMiddleware
                 });
             }
 
-            // ipCache.GetOrUpdate(cacheKey, (x) => 0, (x, p) => p - 1);
             ipCache.RegisterSuccess(cacheKey);
         }
     }
