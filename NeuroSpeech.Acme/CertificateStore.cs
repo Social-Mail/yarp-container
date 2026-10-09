@@ -94,11 +94,8 @@ public class CertificateStore
                     await Resolves(serverName, token)
             );
 
-            if (String.IsNullOrWhiteSpace(serverName) || !canIssueCertificate)
+            if (!canIssueCertificate)
             {
-                // throw new InvalidOperationException($"{serverName} does not resolve to this server.");
-                // send self signed certificate...
-                // return await Create24HourCertificate("localhost");
                 return null;
             }
 
