@@ -1,5 +1,5 @@
 # Features
-1. YARP Reverse Proxy
+1. YARP Reverse Proxy for HTTP and SMTP
 2. Automatic certificate installation with following conditions.
     * If host points to `SELF_IPs` environment variable, then single host certificate is installed.
     * If CNAME `_acme-challenge` prefix points to provided `AWS_ZONE_SUFFIX` environment variable. For example, `_acme-challenge.zone01.com` points to `zone01.com.le01.[WildCardPlaceHolder.com]` where `le01.[WildCardPlaceHolder.com]` is zone suffix.
