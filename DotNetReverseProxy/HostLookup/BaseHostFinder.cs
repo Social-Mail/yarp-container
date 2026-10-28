@@ -50,6 +50,7 @@ public class BaseHostFinder
         {
             this.defaultEndPoint = Factory(ParseEndPoint(key));
             logger.Log(new {
+                protocol,
                 key,
                 this.defaultEndPoint
             });
