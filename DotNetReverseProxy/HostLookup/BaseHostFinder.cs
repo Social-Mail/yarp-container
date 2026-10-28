@@ -48,10 +48,11 @@ public class BaseHostFinder
         this.forwardJsonFilePath = forwardJsonFilePath;
         if (key != null)
         {
-            logger.Log(new { 
+            this.defaultEndPoint = Factory(ParseEndPoint(key));
+            logger.Log(new {
+                key,
                 this.defaultEndPoint
             });
-            this.defaultEndPoint = Factory(ParseEndPoint(key));
         }
         this.logger = logger;
     }
