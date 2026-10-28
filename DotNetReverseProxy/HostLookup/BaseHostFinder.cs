@@ -52,7 +52,6 @@ public class BaseHostFinder
             logger.Log(new {
                 protocol,
                 key,
-                this.defaultEndPoint
             });
         }
         this.logger = logger;
