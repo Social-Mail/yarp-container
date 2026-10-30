@@ -15,11 +15,12 @@ public class BannedIPs
 
     public void Add(IPAddress ip)
     {
-        cache.GetOrCreate($"banned-{ip}", (x) =>
-        {
-            x.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
-            return ip;
-        });
+        cache.Set($"banned-{ip}", ip);
+        //cache.GetOrCreate($"banned-{ip}", (x) =>
+        //{
+        //    x.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+        //    return ip;
+        //});
     }
 
     public bool IsBanned(IPAddress ip)

@@ -115,7 +115,7 @@ public class ConcurrentIPCache
         return false;
     }
 
-    public int GetOrUpdate(IPAddress? key, Func<IPAddress, int> insertFactory, Func<IPAddress, int, int> updateFactory)
+    public int GetOrUpdate(IPAddress? key, int add, int update)
     {
         if (key == null
             || key.IsLocalOrDocker()
@@ -124,54 +124,85 @@ public class ConcurrentIPCache
             return 0;
         }
 
+        if(add == 0)
+        {
+            if(!_dictionary.ContainsKey(key))
+            {
+                return 0;
+            }
+        }
+
         long expiry = DateTime.UtcNow.Ticks + _slidingTime.Ticks;
 
-        while (true)
+        var finalItem = _dictionary.AddOrUpdate(
+            key,
+            // Insert factory if it doesn't exist
+            (key) => new CacheItem(add, expiry),
+            // Update factory if it already exists
+            (key, existingItem) =>
+            {
+                // Safely modify the properties inside the atomic delegate
+                Interlocked.Add(ref existingItem.Value, update);
+                Volatile.Write(ref existingItem.AbsoluteExpiry, expiry);
+                return existingItem;
+            }
+        );
+
+        if(finalItem.Value <= 0)
         {
-            if (_dictionary.TryGetValue(key, out var existingItem))
-            {
-                // Thread-safe update inside a lock context bound strictly to the target item bucket
-                lock (existingItem)
-                {
-                    // Ensure it wasn't removed right before we locked it
-                    if (!_dictionary.ContainsKey(key)) continue;
-
-                    int newValue = updateFactory(key, existingItem.Value);
-                    if (newValue <= 0)
-                    {
-                        _dictionary.TryRemove(key, out _);
-                        return 0;
-                    }
-
-                    existingItem.Value = newValue;
-                    Volatile.Write(ref existingItem.AbsoluteExpiry, expiry);
-                    return newValue;
-                }
-            }
-
-            // Item does not exist path
-            int insertedValue = insertFactory(key);
-            if (insertedValue <= 0) return 0;
-
-            var newItem = new CacheItem(insertedValue, expiry);
-            if (_dictionary.TryAdd(key, newItem))
-            {
-                return insertedValue;
-            }
-            // If TryAdd fails, another thread inserted it first. Loop back to update it.
+            _dictionary.Remove(key, out var _);
+            return 0;
         }
+
+        return finalItem.Value;
+
+
+        //while (true)
+        //{
+        //    if (_dictionary.TryGetValue(key, out var existingItem))
+        //    {
+        //        // Thread-safe update inside a lock context bound strictly to the target item bucket
+        //        lock (existingItem)
+        //        {
+        //            // Ensure it wasn't removed right before we locked it
+        //            if (!_dictionary.ContainsKey(key)) continue;
+
+        //            int newValue = updateFactory(key, existingItem.Value);
+        //            if (newValue <= 0)
+        //            {
+        //                _dictionary.TryRemove(key, out _);
+        //                return 0;
+        //            }
+
+        //            existingItem.Value = newValue;
+        //            Volatile.Write(ref existingItem.AbsoluteExpiry, expiry);
+        //            return newValue;
+        //        }
+        //    }
+
+        //    // Item does not exist path
+        //    int insertedValue = insertFactory(key);
+        //    if (insertedValue <= 0) return 0;
+
+        //    var newItem = new CacheItem(insertedValue, expiry);
+        //    if (_dictionary.TryAdd(key, newItem))
+        //    {
+        //        return insertedValue;
+        //    }
+        //    // If TryAdd fails, another thread inserted it first. Loop back to update it.
+        //}
     }
 
     public void RegisterSuccess(IPAddress? cacheKey)
     {
-        GetOrUpdate(cacheKey, (x) => 0, (x, currentErrors) => currentErrors - 1);
+        GetOrUpdate(cacheKey, 0, - 1);
     }
 
     public bool ContainsKey(IPAddress a) => _dictionary.ContainsKey(a);
 
     internal bool RegisterPenalty(IPAddress cacheKey, int penalty)
     {
-        var n = GetOrUpdate(cacheKey, (x) => penalty, (x, p) => p + penalty);
+        var n = GetOrUpdate(cacheKey, penalty, penalty);
         if(n > MaxPenalty)
         {
             bannedIPs?.Add(cacheKey);
