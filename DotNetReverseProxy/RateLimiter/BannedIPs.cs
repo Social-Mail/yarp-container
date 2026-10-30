@@ -15,7 +15,7 @@ public class BannedIPs
 
     public void Add(IPAddress ip)
     {
-        cache.Set($"banned-{ip}", ip);
+        cache.Set($"banned-{ip}", ip, TimeSpan.FromMinutes(5));
         //cache.GetOrCreate($"banned-{ip}", (x) =>
         //{
         //    x.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
