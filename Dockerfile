@@ -15,7 +15,7 @@ RUN dotnet publish ./DotNetReverseProxy/DotNetReverseProxy.csproj -c Release -o 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine AS final
 LABEL org.opencontainers.image.source https://github.com/social-mail/yarp-container
 WORKDIR /app
-RUN apk add --no-cache libmsquic
+RUN apk add --no-cache libmsquic ipset iptables
 COPY --from=build /app/publish .
 EXPOSE 443/tcp
 EXPOSE 443/udp

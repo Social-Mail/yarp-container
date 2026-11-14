@@ -1,6 +1,7 @@
 ﻿using DotNetReverseProxy;
 using DotNetReverseProxy.ForwardSmtp;
 using DotNetReverseProxy.HostLookup;
+using DotNetReverseProxy.RateLimiter;
 using DotNetReverseProxy.Tls;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -25,6 +26,8 @@ try
     if (!QuicListener.IsSupported) {
         Console.Out.WriteLine("Quic is not available");
     }
+
+    KernelIpBlocker.Initialize();
 
     var weakTable = new ConditionalWeakTable<object, UnixDomainSocketEndPoint>();
 
