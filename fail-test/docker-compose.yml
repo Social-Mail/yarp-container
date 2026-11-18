@@ -19,6 +19,10 @@ services:
       - FORWARD_HOST=fail-tester
       - LOG_MODE=debug
       - LOCAL_TEST=true
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - app-net
 
   fail-tester:
     image: social-mail-yarp-fail-tester
@@ -33,3 +37,9 @@ services:
       - NODE_TLS_REJECT_UNAUTHORIZED=0
       - PORT=8001
       - TEST_HOST=tls-server
+    networks:
+      - app-net
+
+networks:
+  app-net:
+    driver: bridge

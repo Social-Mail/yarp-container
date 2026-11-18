@@ -1,23 +1,36 @@
 ﻿namespace DotNetReverseProxy.RateLimiter;
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
-public static class KernelIpBlocker
+public class KernelIpBlocker
 {
     private const string SetName = "temp_ban";
-    private const int DefaultTimeoutSeconds = 900; // 15 minutes
+    private static int DefaultTimeoutSeconds = 900; // 15 minutes
 
     /// <summary>
     /// Initializes the ipset hash table, flushes old entries, and attaches the iptables DROP rule.
     /// Call this once in Program.cs before app.Run().
     /// </summary>
-    public static void Initialize()
+    public KernelIpBlocker()
     {
+
+        // on testing we will set only 15 seconds...
+        if(LocalTesting.IsTesting)
+        {
+            DefaultTimeoutSeconds = 15;
+        }
+
+
         // 1. Create the ipset with a 900s default timeout (-exist avoids errors if already created)
-        RunCommand("ipset", ["create", SetName, "hash:ip", "timeout", DefaultTimeoutSeconds.ToString(), "-exist"]);
+        int ipsetCreate = RunCommand("ipset", ["create", SetName, "hash:ip", "timeout", DefaultTimeoutSeconds.ToString(), "-exist"]);
+        if (ipsetCreate != 0)
+        {
+            FailStartup("Failed to initialize ipset.");
+        }
 
         // 2. Flush all entries to guarantee a 100% clean slate on container restart
         RunCommand("ipset", ["flush", SetName]);
@@ -35,7 +48,7 @@ public static class KernelIpBlocker
     /// <summary>
     /// Blocks an IPv4 address in the Linux kernel for 15 minutes (900 seconds).
     /// </summary>
-    public static bool BanFor15Minutes(string ipAddress)
+    public bool BanFor15Minutes(string ipAddress)
     {
         if (!IPAddress.TryParse(ipAddress, out var validIp) ||
             validIp.AddressFamily != AddressFamily.InterNetwork)
@@ -56,7 +69,7 @@ public static class KernelIpBlocker
     /// <summary>
     /// Manually removes an IP address from the blocklist before the 15 minutes expire.
     /// </summary>
-    public static bool Unban(string ipAddress)
+    public bool Unban(string ipAddress)
     {
         if (!IPAddress.TryParse(ipAddress, out var validIp) ||
             validIp.AddressFamily != AddressFamily.InterNetwork)
@@ -68,8 +81,11 @@ public static class KernelIpBlocker
         return exitCode == 0;
     }
 
-    private static int RunCommand(string fileName, IEnumerable<string> args)
+    private int RunCommand(string fileName, IEnumerable<string> args)
     {
+
+        Console.WriteLine($"{fileName} {string.Join(",", args)}");
+
         var startInfo = new ProcessStartInfo
         {
             FileName = fileName,
@@ -89,5 +105,18 @@ public static class KernelIpBlocker
 
         process.WaitForExit(2000);
         return process.ExitCode;
+    }
+
+    private static void FailStartup(string reason)
+    {
+        Console.ForegroundColor = ConsoleColor.Red;
+        Console.Error.WriteLine("==================================================================");
+        Console.Error.WriteLine($"FATAL STARTUP ERROR: {reason}");
+        Console.Error.WriteLine("The container lacks network admin privileges.");
+        Console.Error.WriteLine("Add 'cap_add: [NET_ADMIN]' to your docker-compose.yml and run as root.");
+        Console.Error.WriteLine("==================================================================");
+        Console.ResetColor();
+
+        Environment.Exit(1);
     }
 }
