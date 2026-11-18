@@ -27,7 +27,7 @@ try
         Console.Out.WriteLine("Quic is not available");
     }
 
-    KernelIpBlocker.Initialize();
+    // KernelIpBlocker.Initialize();
 
     var weakTable = new ConditionalWeakTable<object, UnixDomainSocketEndPoint>();
 
