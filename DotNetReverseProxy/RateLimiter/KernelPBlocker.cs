@@ -19,10 +19,10 @@ public class KernelIpBlocker
     {
 
         // on testing we will set only 15 seconds...
-        if(LocalTesting.IsTesting)
-        {
-            DefaultTimeoutSeconds = 15;
-        }
+        //if(LocalTesting.IsTesting)
+        //{
+        //    DefaultTimeoutSeconds = 15;
+        //}
 
 
         // 1. Create the ipset with a 900s default timeout (-exist avoids errors if already created)

@@ -17,7 +17,7 @@ public class BannedIPs
 
     public void Add(IPAddress ip)
     {
-        cache.Set($"banned-{ip}", ip, TimeSpan.FromMinutes(5));
+        cache.Set($"banned-{ip}", ip, TimeSpan.FromMinutes(15));
         this.ipBlocker.BanFor15Minutes(ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4().ToString() : ip.ToString());
         // KernelIpBlocker.BanFor15Minutes( ip.IsIPv4MappedToIPv6 ? ip.MapToIPv4().ToString() : ip.ToString());
         //cache.GetOrCreate($"banned-{ip}", (x) =>

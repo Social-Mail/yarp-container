@@ -8,10 +8,10 @@ public static class IpExtensions
 {
     public static bool IsLocalOrDocker(this IPAddress ip)
     {
-        if (LocalTesting.IsTesting)
-        {
-            return false;
-        }
+        //if (LocalTesting.IsTesting)
+        //{
+        //    return false;
+        //}
 
         if (ip == null) return false;
 
