@@ -365,6 +365,11 @@ public class BaseHostFinder
     {
         var host = context.InitialRequestMessage.Headers.Host ?? "localhost";
         var factory = GetPort(host);
-        return factory!(token);
+        var s = factory?.Invoke(token);
+        if(s == null)
+        {
+            throw new HttpRequestException("Cannot connect to host", null, HttpStatusCode.NotFound);
+        }
+        return s.Value;
     }
 }
