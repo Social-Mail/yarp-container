@@ -62,7 +62,7 @@ public class CertificateStore
         if (selfSigned || string.IsNullOrWhiteSpace(serverName) || IPAddress.TryParse(serverName, out var ip))
         {
             // disable ip based certificate installation
-            return await Create24HourCertificate(serverName);
+            return await Create24HourCertificate();
         }
 
         try {
@@ -71,7 +71,7 @@ public class CertificateStore
                 bool shouldServe = canServe != null && await canServe(serverName, token);
                 if (!shouldServe)
                 {
-                    return null;
+                    return await Create24HourCertificate();
                 }
             } catch (Exception ex)
             {
@@ -130,7 +130,7 @@ public class CertificateStore
                 error = ex.ToString(),
                 host = serverName
             });
-            return await Create24HourCertificate(originalName);
+            return await Create24HourCertificate();
         }
     }
 
@@ -275,7 +275,7 @@ public class CertificateStore
         return false;
     }
 
-    public async Task<X509Certificate2> Create24HourCertificate(string subjectName)
+    public async Task<X509Certificate2> Create24HourCertificate(string subjectName = "localhost")
     {
 
         var certFileName = subjectName;
