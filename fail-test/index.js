@@ -1,13 +1,5 @@
 import http from "node:http";
 
-const s = http.createServer((req, res) => {
-    res.statusCode = 404;
-    res.setHeader("x-error-penalty", "10");
-    res.end();
-});
-
-s.listen(Number(process.env.PORT));
-
 const host = process.env.TEST_HOST;
 
 async function test() {
@@ -26,6 +18,20 @@ async function test() {
 }
 
 async function runAll() {
+
+    // stating server...
+    const s = http.createServer((req, res) => {
+        res.statusCode = 404;
+        res.setHeader("x-error-penalty", "10");
+        res.end();
+    });
+
+
+    await new Promise((resolve) => s.listen(Number(process.env.PORT), resolve));
+
+    console.log(`Server started on ${process.env.PORT}`);
+
+
     while(true) {
         const all = [];
         for(let i=0;i<1000;i++) {

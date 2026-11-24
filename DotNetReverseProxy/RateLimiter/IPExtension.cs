@@ -6,12 +6,9 @@ namespace DotNetReverseProxy.RateLimiter;
 
 public static class IpExtensions
 {
-    //private static bool IsLocalTest = Environment.GetEnvironmentVariable("LOCAL_TEST")?.Equals("true", StringComparison.OrdinalIgnoreCase)
-    //        ?? false;
-
     public static bool IsLocalOrDocker(this IPAddress ip)
     {
-        //if(IsLocalTest)
+        //if (LocalTesting.IsTesting)
         //{
         //    return false;
         //}

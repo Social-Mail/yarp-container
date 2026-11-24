@@ -27,8 +27,6 @@ try
         Console.Out.WriteLine("Quic is not available");
     }
 
-    // KernelIpBlocker.Initialize();
-
     var weakTable = new ConditionalWeakTable<object, UnixDomainSocketEndPoint>();
 
     // this cache is for TLS resumption
@@ -75,6 +73,7 @@ try
 
     builder.Services.AddMemoryCache();
     builder.Services.AddHttpForwarder();
+    builder.Services.AddSingleton<KernelIpBlocker>();
     builder.Services.AddSingleton<JsonLogger>();
     builder.Services.AddScoped<ISmtpReceiver, ForwardSmtpReceiver>();
     builder.Services.AddSingleton<CertificateStore>();
