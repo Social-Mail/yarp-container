@@ -48,6 +48,17 @@ public class CertificateInstaller: IMiddleware
         this.acmeEABHmac= System.Environment.GetEnvironmentVariable("ACME_EAB_HMAC");
         this.acmeEmail = System.Environment.GetEnvironmentVariable("ACME_EMAIL");
 
+        if(string.IsNullOrEmpty(this.acmeEmail))
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Error.WriteLine("==================================================================");
+            Console.Error.WriteLine($"FATAL STARTUP ERROR: Environment Variable ACME_EMAIL not set");
+            Console.Error.WriteLine("==================================================================");
+            Console.ResetColor();
+
+            Environment.Exit(1);
+        }
+
         switch (this.acmeEndPoint?.ToLower())
         {
             case "staging":
